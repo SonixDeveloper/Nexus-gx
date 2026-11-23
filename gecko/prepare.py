@@ -69,16 +69,30 @@ def prepare(source):
         raise ValueError(f"Expected Firefox ESR {esr}, got {version!r}")
     target = brand(source)
     content = target / "content"
-    shutil.copyfile(GECKO / "chrome/nexus.css", content / "nexus.css")
+    filenames = ("nexus.css", "nexus-start.html", "nexus-start.css", "nexus-start.js")
+    for name in filenames:
+        shutil.copyfile(GECKO / "chrome" / name, content / name)
     script = (GECKO / "chrome/nexus.js").read_text(encoding="utf-8")
     (content / "nexus.js").write_text(f"const NEXUS_PALETTES = {json.dumps(palettes())};\n{script}", encoding="utf-8")
     with (content / "jar.mn").open("a", encoding="utf-8") as manifest:
-        manifest.write("\n  content/branding/nexus.css\n  content/branding/nexus.js\n")
+        manifest.write("\n")
+        for name in (*filenames, "nexus.js"):
+            manifest.write(f"  content/branding/{name}\n")
     replace_once(
         source / "browser/base/content/browser.xhtml",
         "</head>",
         '  <link rel="stylesheet" href="chrome://branding/content/nexus.css" />\n'
         '  <script src="chrome://branding/content/nexus.js"></script>\n</head>',
+    )
+    about = source / "browser/components/about"
+    replace_once(about / "components.conf", "    'privatebrowsing',", "    'nexus',\n    'privatebrowsing',")
+    replace_once(
+        about / "AboutRedirector.cpp",
+        '    {"privatebrowsing",',
+        '    {"nexus", "chrome://branding/content/nexus-start.html",\n'
+        '     nsIAboutModule::URI_SAFE_FOR_UNTRUSTED_CONTENT |\n'
+        '         nsIAboutModule::URI_CAN_LOAD_IN_CHILD | nsIAboutModule::ALLOW_SCRIPT},\n'
+        '    {"privatebrowsing",',
     )
     config = source / "browser/moz.configure"
     replace_once(config, '"{ec8030f7-c20a-464f-9b0e-13a3a9e97384}"', f'"{APP_ID}"')
@@ -88,6 +102,7 @@ def prepare(source):
             '\npref("toolkit.telemetry.enabled", false);\n'
             'pref("datareporting.healthreport.uploadEnabled", false);\n'
             'pref("app.normandy.enabled", false);\n'
+            'pref("browser.startup.homepage", "about:nexus");\n'
         )
 
 
