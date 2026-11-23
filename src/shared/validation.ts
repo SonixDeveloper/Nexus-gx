@@ -64,7 +64,7 @@ export function readSettings(value: unknown): Settings {
     sidebar: s.sidebar === 'right' ? 'right' : 'left', vertical: s.vertical === true,
     language: s.language === 'en' ? 'en' : 'pl', engine: s.engine && Object.hasOwn(engines, s.engine) ? s.engine : defaults.engine,
     profile: s.profile === 'ECO' || s.profile === 'PERFORMANCE' ? s.profile : 'BALANCED',
-    sleepMinutes: number(s.sleepMinutes, 1, 120, 15), focusGaming: s.focusGaming === true, block: s.block !== false,
+    sleepMinutes: number(s.sleepMinutes, 1, 120, 15), focusGaming: s.focusGaming === true, block: s.block !== false, httpsOnly: s.httpsOnly === true,
     history: s.history !== false, clearHistoryOnExit: s.clearHistoryOnExit === true, exceptions, permissions, clock: s.clock !== false, shortcuts: s.shortcuts !== false
   }
 }

@@ -10,3 +10,5 @@
 - Aplikacja nie wysyła własnej telemetrii. Standardowe kontakty internetowe Chromium, dostawców filtrów, wyszukiwarki i odwiedzanych witryn mają własne zasady prywatności.
 
 Przed wydaniem należy zweryfikować wymuszenie sandboxa w każdym formacie i zaktualizować Electron do bieżącej wspieranej wersji.
+
+Opcjonalna blokada nieszyfrowanych żądań jest stosowana do sesji stron. Po włączeniu zwykłe HTTP i WS są blokowane, także w oknach prywatnych. Stan połączenia Proton VPN jest dostępny w oficjalnym kliencie systemowym. Test adresu IP uruchamia użytkownik i adres trafia wtedy do Proton VPN.

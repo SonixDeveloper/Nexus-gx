@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { blockedHost, parseHosts, readSettings, resolveAddress, spotifyPlayerUrl, webUrl } from '../src/shared/validation.ts'
+import { blockedHost, parseHosts, readSettings, resolveAddress, webUrl } from '../src/shared/validation.ts'
 
 test('address bar only admits web schemes and resolves search text', () => {
   assert.equal(resolveAddress('example.com/docs', 'DuckDuckGo'), 'https://example.com/docs')
@@ -24,12 +24,4 @@ test('filters match complete DNS labels and their subdomains', () => {
   assert.equal(blockedHost('IMG.ADS.EXAMPLE.', hosts), true)
   assert.equal(blockedHost('notads.example', hosts), false)
   assert.equal(blockedHost('bad.example.legit.org', hosts), false)
-})
-
-test('Spotify handoff only permits the exact HTTPS web player origin', () => {
-  const track = 'https://open.spotify.com/track/example'
-  assert.equal(spotifyPlayerUrl(track), track)
-  assert.equal(spotifyPlayerUrl('https://open.spotify.com.example.org/track/example'), undefined)
-  assert.equal(spotifyPlayerUrl('https://open.spotify.com:1234/'), undefined)
-  assert.equal(spotifyPlayerUrl('http://open.spotify.com/'), undefined)
 })

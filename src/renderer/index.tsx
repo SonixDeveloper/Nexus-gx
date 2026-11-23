@@ -176,8 +176,14 @@ function App() {
     menu: 'NEXUS GX', theme: 'NEXUS Theme Studio', gaming: 'Gaming Control Center', privacy: tr('Prywatność', 'Privacy'),
     history: tr('Historia', 'History'), bookmarks: tr('Zakładki', 'Bookmarks'), downloads: tr('Pobrane pliki', 'Downloads'), settings: tr('Ustawienia', 'Settings')
   }
-  const toggle = (label: string, key: 'animations' | 'vertical' | 'block' | 'history' | 'clearHistoryOnExit' | 'focusGaming' | 'clock' | 'shortcuts') =>
+  const toggle = (label: string, key: 'animations' | 'vertical' | 'block' | 'httpsOnly' | 'history' | 'clearHistoryOnExit' | 'focusGaming' | 'clock' | 'shortcuts') =>
     <label className="setting"><span>{label}</span><input type="checkbox" checked={state[key]} onChange={event => update({ [key]: event.target.checked })} /></label>
+  const openPrivacyPage = (url: string) => {
+    void send({ type: 'new', url })
+    setPanel(undefined)
+  }
+  const protonDownload = snapshot?.platform === 'windows' ? 'https://protonvpn.com/download-windows'
+    : snapshot?.platform === 'linux' ? 'https://protonvpn.com/download-linux' : 'https://protonvpn.com/download'
   const spotifyTab = Boolean(spotifyPlayerUrl(tab?.url))
   const origin = originOf(tab?.url)
   const secureOrigin = originOf(tab?.url, true)
@@ -300,6 +306,7 @@ function App() {
           </>}
           {panel === 'privacy' && <>
             {toggle(tr('Filtr reklam, trackerów i szkodliwych domen', 'Ad, tracker and malicious domain filter'), 'block')}
+            {toggle(tr('Blokuj nieszyfrowane HTTP i WebSocket', 'Block unencrypted HTTP and WebSockets'), 'httpsOnly')}
             {toggle(tr('Zapisuj historię', 'Save browsing history'), 'history')}
             <p>{tr('Zablokowane żądania', 'Blocked requests')} · {snapshot?.blocked ?? 0}</p>
             <p>{tr('Aktualizacja list', 'Filter update')} · {snapshot?.filterTime ? new Date(snapshot.filterTime).toLocaleString(state.language) : (snapshot?.filtersLoaded ? tr('Wczytano część list', 'Some feeds loaded') : tr('Brak wczytanej listy', 'No filter list loaded'))}</p>
@@ -310,6 +317,19 @@ function App() {
               <label key={permission} className="setting"><span>{permissionLabels[index]} · {secureOrigin}</span><input type="checkbox" checked={state.permissions[secureOrigin]?.includes(permission) ?? false} onChange={event => void send({ type: 'permission', permission, allow: event.target.checked })} /></label>)}
             <div className="actions"><button onClick={() => void send({ type: 'updateFilters' })}>{tr('Zaktualizuj listy', 'Update filters')}</button>
             <button onClick={() => { if (window.confirm(tr('Wyczyścić historię i dane stron?', 'Clear history and site data?'))) void send({ type: 'clear' }) }}>{tr('Wyczyść dane stron', 'Clear site data')}</button></div>
+            <h2>Proton VPN</h2>
+            <p>{tr('Połącz się w oficjalnej aplikacji Proton VPN. Ruch NEXUS GX przejdzie przez systemowy tunel, jeśli przeglądarka nie jest wykluczona w ustawieniach dzielonego tunelowania.', 'Connect in the official Proton VPN app. NEXUS GX traffic uses the system tunnel if the browser is included in split-tunneling settings.')}</p>
+            <div className="actions">
+              <button onClick={() => openPrivacyPage(protonDownload)}>{tr('Pobierz Proton VPN', 'Get Proton VPN')}</button>
+              <button onClick={() => openPrivacyPage('https://protonvpn.com/what-is-my-ip-address')}>{tr('Sprawdź publiczny adres IP', 'Check public IP address')}</button>
+            </div>
+            <p>{tr('NEXUS GX nie sprawdza stanu tunelu. Strona testowa otrzyma Twój publiczny adres IP.', 'NEXUS GX does not verify tunnel status. The test page receives your public IP address.')}</p>
+            <h2>{tr('Konto Mozilla i Firefox', 'Mozilla account and Firefox')}</h2>
+            <p>{tr('Zarządzaj kontem na stronie Mozilla. Przenieś zakładki z pliku HTML wyeksportowanego w Firefoksie. Firefox Sync wymaga osobnej integracji z Mozilla.', 'Manage your account on Mozilla’s website. Transfer bookmarks from an HTML export from Firefox. Firefox Sync requires a separate Mozilla integration.')}</p>
+            <div className="actions">
+              <button onClick={() => openPrivacyPage('https://accounts.firefox.com/')}>{tr('Otwórz konto Mozilla', 'Open Mozilla account')}</button>
+              <button onClick={() => { setBookmarkFolder(''); openPanel('bookmarks') }}>{tr('Przenieś zakładki z Firefoksa', 'Transfer Firefox bookmarks')}</button>
+            </div>
           </>}
           {panel === 'history' && <>
             {!snapshot?.history.length && <p>{tr('Brak historii.', 'No history.')}</p>}

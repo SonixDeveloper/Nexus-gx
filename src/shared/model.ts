@@ -41,6 +41,7 @@ export interface Settings {
   sleepMinutes: number
   focusGaming: boolean
   block: boolean
+  httpsOnly: boolean
   history: boolean
   clearHistoryOnExit: boolean
   exceptions: string[]
@@ -51,7 +52,7 @@ export interface Settings {
 export const defaults: Settings = {
   theme: defaultTheme, savedThemes: [], customShortcuts: [], animations: true, scale: 100, sidebar: 'left', vertical: false,
   language: 'pl', engine: 'DuckDuckGo', profile: 'BALANCED', sleepMinutes: 15, focusGaming: false,
-  block: true, history: true, clearHistoryOnExit: false, exceptions: [], permissions: {}, clock: true, shortcuts: true
+  block: true, httpsOnly: false, history: true, clearHistoryOnExit: false, exceptions: [], permissions: {}, clock: true, shortcuts: true
 }
 export interface Visit { url: string; title: string; at: number; folder?: string }
 export interface Download { id: string; name: string; status: string; bytes: number; total: number }
@@ -64,6 +65,7 @@ export interface Snapshot {
   bookmarks: Visit[]; downloads: Download[]; blocked: number; filterTime: number; filtersLoaded: number; version: string;
   wallpaperRevision: number
   updateConfigured: boolean
+  platform: 'windows' | 'linux' | 'other'
   workspace: string
   workspaces: string[]
   profileId: string

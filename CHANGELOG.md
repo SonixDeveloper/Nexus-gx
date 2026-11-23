@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.2 — wersja rozwojowa
+
+- Dodano dostęp do oficjalnego Proton VPN, sprawdzania IP i konta Mozilla z panelu Prywatność.
+- Dodano opcjonalne blokowanie nieszyfrowanych żądań HTTP i połączeń WebSocket.
+
 ## 0.1.1 — wersja rozwojowa
 
 - Dodano 12 motywów, w tym trzy jasne palety.

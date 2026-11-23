@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import { once } from 'node:events'
+import { createServer } from 'node:http'
 import { setTimeout as pause } from 'node:timers/promises'
 import { BrowserWindow } from 'electron'
 
@@ -23,8 +24,21 @@ export async function runSmoke(browser: BrowserForTest, privateSessionForTest: (
     await pause(50)
   }
   assert.equal(await ui.executeJavaScript('document.querySelector(".address input")?.tagName'), 'INPUT')
-  await browser.execute({ type: 'settings', value: { ...browser.snapshot().settings, language: 'en', scale: 115 } })
-  assert.equal(browser.snapshot().settings.scale, 115)
+  const server = createServer((_request, response) => { response.end('NEXUS HTTPS-only test') })
+  server.listen(0, '127.0.0.1')
+  await once(server, 'listening')
+  const local = server.address()
+  assert.ok(local && typeof local !== 'string')
+  const plaintext = 'http://127.0.0.1:' + local.port
+  try {
+    assert.equal(await (await browser.ses.fetch(plaintext)).text(), 'NEXUS HTTPS-only test')
+    await browser.execute({ type: 'settings', value: { ...browser.snapshot().settings, language: 'en', scale: 115, httpsOnly: true } })
+    assert.equal(browser.snapshot().settings.scale, 115)
+    await assert.rejects(browser.ses.fetch(plaintext), /ERR_BLOCKED_BY_CLIENT/)
+  } finally {
+    server.closeAllConnections()
+    server.close()
+  }
   await browser.ses.cookies.set({ url: 'https://example.com/', name: 'nexus-test', value: 'normal' })
   await browser.execute({ type: 'private' })
   const privateWindow = BrowserWindow.getAllWindows().find(win => win !== browser.win)

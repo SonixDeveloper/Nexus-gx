@@ -62,7 +62,11 @@ function setupSession(ses: Session) {
     answer(allowed(contents, permission, details.requestingUrl, details.isMainFrame === true, media))
   })
   ses.setDisplayMediaRequestHandler((_request, answer) => answer({}))
-  ses.webRequest.onBeforeRequest({ urls: ['http://*/*', 'https://*/*'] }, (details, callback) => {
+  ses.webRequest.onBeforeRequest({ urls: ['http://*/*', 'https://*/*', 'ws://*/*'] }, (details, callback) => {
+    if (storage.data.settings.httpsOnly && (details.url.startsWith('http:') || details.url.startsWith('ws:'))) {
+      callback({ cancel: true })
+      return
+    }
     const owner = owners.get(details.webContentsId ?? -1)
     const origin = originOf(details.resourceType === 'mainFrame' ? details.url : details.webContentsId ? webContents.fromId(details.webContentsId)?.getURL() : undefined)
     const excepted = !owner?.privateMode && origin && storage.data.settings.exceptions.includes(origin)
@@ -137,7 +141,7 @@ class Browser {
     return {
       tabs: this.tabs.map(({ id, url, title, loading, back, forward, pinned, muted, sleeping, group, workspace, error }) =>
         ({ id, url, title, loading, back, forward, pinned, muted, sleeping, group, workspace, error })),
-      active: this.active, workspace: this.tab?.workspace ?? '', workspaces: this.workspaces, private: this.privateMode, settings: storage.data.settings,
+      active: this.active, platform: process.platform === 'win32' ? 'windows' : process.platform === 'linux' ? 'linux' : 'other', workspace: this.tab?.workspace ?? '', workspaces: this.workspaces, private: this.privateMode, settings: storage.data.settings,
       history: this.privateMode ? [] : storage.data.history, bookmarks: storage.data.bookmarks,
       downloads: [...this.downloads.values()].map(entry => entry.info), blocked: this.blocked,
       filterTime: filters.updated, filtersLoaded: filters.loaded, version: app.getVersion(), wallpaperRevision, updateConfigured, profileId: profiles.active, profiles: profiles.entries
