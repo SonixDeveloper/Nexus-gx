@@ -1,0 +1,77 @@
+name: NEXUS GX Gecko Windows
+on:
+  pull_request:
+    paths:
+      - 'gecko/**'
+      - '.github/workflows/gecko-windows.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: gecko-windows-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  cross-build:
+    if: github.event_name == 'workflow_dispatch' || (github.head_ref == 'nexus-gx-gecko-win' && github.event.pull_request.head.repo.full_name == github.repository)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v6
+      - name: Free runner storage
+        run: |
+          sudo rm -rf -- /usr/local/lib/android /opt/ghc /usr/share/dotnet
+          df -h .
+      - name: Install cross-build prerequisites
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential python3-dev python3-venv pkg-config msitools nsis unzip zip yasm gpg
+          rustup target add x86_64-pc-windows-msvc
+      - run: python3 -m unittest discover -s gecko/tests
+      - run: bash gecko/fetch-source.sh
+      - run: python3 gecko/prepare.py gecko/work/source
+      - name: Compile and package Gecko for Windows
+        working-directory: gecko/work/source
+        env:
+          MOZCONFIG: ${{ github.workspace }}/gecko/mozconfig.win64
+        run: |
+          ./mach build
+          ./mach package
+          ./mach installer
+          mapfile -t installers < <(find obj-nexus-gx/dist -type f -iname '*.installer.exe')
+          if [ "${#installers[@]}" -ne 1 ]; then
+            printf 'Expected one full Windows installer, found %s\n' "${#installers[@]}" >&2
+            exit 1
+          fi
+          install -Dm644 "${installers[0]}" "$RUNNER_TEMP/NEXUS-GX-Gecko-Setup.exe"
+      - uses: actions/upload-artifact@v6
+        with:
+          name: nexus-gx-gecko-windows-x64
+          if-no-files-found: error
+          path: |
+            ${{ runner.temp }}/NEXUS-GX-Gecko-Setup.exe
+            gecko/work/source/obj-nexus-gx/dist/*.zip
+  smoke-windows:
+    needs: cross-build
+    runs-on: windows-2025
+    timeout-minutes: 15
+    steps:
+      - uses: actions/download-artifact@v7
+        with:
+          name: nexus-gx-gecko-windows-x64
+          path: GeckoDistribution
+      - name: Launch packaged Gecko on Windows
+        shell: pwsh
+        run: |
+          $archives = @(Get-ChildItem GeckoDistribution -Filter *.zip -Recurse)
+          if ($archives.Count -ne 1) { throw 'Expected a single portable browser ZIP' }
+          Expand-Archive -LiteralPath $archives[0].FullName -DestinationPath "$env:RUNNER_TEMP/nexus-gecko"
+          $browser = @(Get-ChildItem "$env:RUNNER_TEMP/nexus-gecko" -Recurse -Filter nexus-gx.exe)
+          if ($browser.Count -ne 1) { throw 'Expected the NEXUS GX executable' }
+          $profile = New-Item -ItemType Directory "$env:RUNNER_TEMP/nexus-gecko-profile"
+          $screenshot = Join-Path $env:RUNNER_TEMP 'nexus-gecko-windows.png'
+          $process = Start-Process -FilePath $browser[0].FullName -ArgumentList @(
+            '--headless', '--no-remote', '--profile', ('"{0}"' -f $profile.FullName),
+            '--screenshot', ('"{0}"' -f $screenshot), 'about:nexus'
+          ) -PassThru
+          if (!$process.WaitForExit(90000)) { $process.Kill(); throw 'Gecko did not exit after startup smoke test' }
+          if ($process.ExitCode -ne 0 -or !(Test-Path $screenshot)) { throw 'Packaged Gecko did not capture its startup page' }
