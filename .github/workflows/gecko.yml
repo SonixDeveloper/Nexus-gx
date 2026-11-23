@@ -28,7 +28,7 @@ jobs:
       - run: bash gecko/fetch-source.sh
       - run: python3 gecko/prepare.py gecko/work/source
   compile-linux:
-    if: (github.event_name == 'workflow_dispatch' && inputs.compile) || (github.event_name == 'pull_request' && github.head_ref == 'nexus-gx-gecko' && github.event.pull_request.head.repo.full_name == github.repository)
+    if: (github.event_name == 'workflow_dispatch' && inputs.compile) || (github.event_name == 'pull_request' && (github.head_ref == 'nexus-gx-gecko' || github.head_ref == 'nexus-gx-gecko-home') && github.event.pull_request.head.repo.full_name == github.repository)
     needs: prepare
     runs-on: ubuntu-24.04
     timeout-minutes: 180
@@ -55,8 +55,13 @@ jobs:
           mkdir -p "$RUNNER_TEMP/nexus-gecko-profile"
           timeout 60 obj-nexus-gx/dist/bin/nexus-gx --headless --no-remote \
             --profile "$RUNNER_TEMP/nexus-gecko-profile" --screenshot "$RUNNER_TEMP/nexus-gecko.png" \
-            'data:text/html,<title>NEXUS GX Gecko smoke test</title><h1>NEXUS GX</h1>'
+            'about:nexus'
           test -s "$RUNNER_TEMP/nexus-gecko.png"
+      - uses: actions/upload-artifact@v6
+        with:
+          name: nexus-gx-gecko-startup-screenshot
+          if-no-files-found: error
+          path: ${{ runner.temp }}/nexus-gecko.png
       - uses: actions/upload-artifact@v6
         with:
           name: nexus-gx-gecko-linux-x86_64
