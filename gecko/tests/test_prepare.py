@@ -18,6 +18,8 @@ class PrepareTests(unittest.TestCase):
             "browser/branding/unofficial/locales/en-US/brand.ftl": "-brand-short-name = Nightly\n",
             "browser/branding/unofficial/pref/firefox-branding.js": "",
             "browser/branding/unofficial/default16.png": "original icon",
+            "browser/components/about/components.conf": "pages = [\n    'privatebrowsing',\n]",
+            "browser/components/about/AboutRedirector.cpp": '    {"privatebrowsing", "chrome://fake/content/index.html", 0},',
             "browser/base/content/browser.xhtml": "<html><head></head></html>",
             "browser/moz.configure": 'imply_option("MOZ_APP_VENDOR", "Mozilla")\n'
                                      'imply_option("MOZ_APP_ID", "{ec8030f7-c20a-464f-9b0e-13a3a9e97384}")\n',
@@ -36,6 +38,9 @@ class PrepareTests(unittest.TestCase):
             self.assertIn("NEXUS GX", (brand / "locales/en-US/brand.ftl").read_text())
             self.assertIn("Cyberpunk Neon", (brand / "content/nexus.js").read_text())
             self.assertIn("Midnight Sakura", (brand / "content/nexus.js").read_text())
+            self.assertIn("nexus-start.html", (brand / "content/jar.mn").read_text())
+            self.assertIn("URI_SAFE_FOR_UNTRUSTED_CONTENT", (source / "browser/components/about/AboutRedirector.cpp").read_text())
+            self.assertIn('"about:nexus"', (brand / "pref/firefox-branding.js").read_text())
             self.assertIn("nexus.js", (brand / "content/jar.mn").read_text())
             self.assertIn("chrome://branding/content/nexus.css", (source / "browser/base/content/browser.xhtml").read_text())
             self.assertIn(module.APP_ID, (source / "browser/moz.configure").read_text())

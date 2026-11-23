@@ -24,6 +24,19 @@
     button.setAttribute('tooltiptext', 'NEXUS Theme Studio')
     const menu = document.createXULElement('menupopup')
     menu.setAttribute('aria-label', 'NEXUS Theme Studio')
+    const polish = navigator.language.toLowerCase().startsWith('pl')
+    const pages = [
+      [polish ? 'Strona startowa NEXUS GX' : 'NEXUS GX home', 'about:nexus'],
+      [polish ? 'Procesy przeglądarki' : 'Browser processes', 'about:processes'],
+      ['Proton VPN', 'https://addons.mozilla.org/firefox/addon/proton-vpn-firefox-extension/']
+    ]
+    for (const [label, url] of pages) {
+      const item = document.createXULElement('menuitem')
+      item.setAttribute('label', label)
+      item.addEventListener('command', () => window.openTrustedLinkIn(url, 'tab'))
+      menu.append(item)
+    }
+    menu.append(document.createXULElement('menuseparator'))
     for (const [name] of NEXUS_PALETTES) {
       const item = document.createXULElement('menuitem')
       item.setAttribute('label', name)

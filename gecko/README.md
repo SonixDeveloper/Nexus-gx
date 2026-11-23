@@ -29,8 +29,8 @@ Na Windows natywny instalator tworzy `./mach installer` po `./mach package`. Pak
 
 ## Zakres i weryfikacja
 
-- Nakładka obejmuje identyfikator aplikacji, ikonę, palety i style kart oraz paska nawigacji. W kolejnym etapie trzeba przenieść widżety startowe, pełny edytor motywów, Gaming Control Center i import danych z wersji Electron.
-- Oficjalne rozszerzenie [Proton VPN dla Firefox](https://protonvpn.com/support/browser-extensions) jest docelową metodą połączenia wewnątrz przeglądarki. Weryfikacja wymaga uruchomienia wersji Gecko, zainstalowania podpisanego rozszerzenia, zalogowania się na koncie Proton oraz porównania publicznego IP i ruchu DNS przed połączeniem, w trakcie i po przerwaniu połączenia.
+- Nakładka obejmuje identyfikator aplikacji, ikonę, palety i style kart oraz paska nawigacji. Strona startowa about:nexus zawiera zegar, wyszukiwarkę i skróty. Do przeniesienia pozostają widżety konfigurowalne, pełny edytor motywów, profile Gaming Control Center i import danych z wersji Electron.
+- Oficjalne rozszerzenie [Proton VPN dla Firefox](https://protonvpn.com/support/browser-extensions) jest dostępne z menu NEXUS GX jako odnośnik do instalacji i jest docelową metodą połączenia wewnątrz przeglądarki. Weryfikacja wymaga uruchomienia wersji Gecko, zainstalowania podpisanego rozszerzenia, zalogowania się na koncie Proton oraz porównania publicznego IP i ruchu DNS przed połączeniem, w trakcie i po przerwaniu połączenia.
 - Logowanie Mozilla i synchronizacja wymagają autoryzacji i testów na oddzielnym profilu NEXUS GX.
 - Własny mechanizm aktualizacji wymaga osobnej infrastruktury. Wersja rozwojowa nie przyjmuje aktualizacji binarnych Firefox i nie jest wydaniem produkcyjnym.
 - Testy przygotowania nakładki uruchamia `python3 -m unittest discover -s gecko/tests`. Wydajność Gecko i Electron należy porównać na tych samych stronach i na tym samym sprzęcie.

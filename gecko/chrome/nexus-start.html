@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src chrome:; style-src chrome:; form-action https://duckduckgo.com; base-uri 'none'">
+<title>NEXUS GX</title>
+<link rel="stylesheet" href="chrome://branding/content/nexus-start.css">
+<script src="chrome://branding/content/nexus-start.js" defer></script>
+</head>
+<body>
+<main>
+  <header>
+    <h1>NEXUS <span>GX</span></h1>
+    <time id="clock"></time>
+    <p id="date"></p>
+  </header>
+  <form method="get" action="https://duckduckgo.com/">
+    <label for="query" id="search-label">Search the web</label>
+    <div class="search">
+      <input id="query" name="q" type="search" required>
+      <button id="search-button" type="submit">Search</button>
+    </div>
+  </form>
+  <nav aria-label="Quick access" id="shortcuts">
+    <a href="https://discord.com/app">Discord</a>
+    <a href="https://www.twitch.tv/">Twitch</a>
+    <a href="https://www.youtube.com/">YouTube</a>
+    <a href="https://store.steampowered.com/">Steam</a>
+    <a href="https://open.spotify.com/">Spotify</a>
+    <a href="https://www.reddit.com/">Reddit</a>
+  </nav>
+</main>
+</body>
+</html>
