@@ -1,0 +1,2 @@
+#!/bin/sh
+exec zypak-wrapper /app/nexus-gx/nexus-gx "$@"

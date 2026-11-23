@@ -1,0 +1,42 @@
+appId: io.github.nexusgx.NexusGX
+productName: NEXUS GX
+executableName: nexus-gx
+directories:
+  output: release
+  buildResources: packaging
+files:
+  - dist/**/*
+  - package.json
+asar: true
+toolsets:
+  appimage: "1.0.3"
+electronFuses:
+  runAsNode: false
+  enableNodeOptionsEnvironmentVariable: false
+  enableNodeCliInspectArguments: false
+  enableEmbeddedAsarIntegrityValidation: true
+  onlyLoadAppFromAsar: true
+  grantFileProtocolExtraPrivileges: false
+win:
+  icon: packaging/icon.ico
+  target: nsis
+  artifactName: NEXUS-GX-Setup.exe
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  include: packaging/browser.nsh
+linux:
+  icon: packaging/icon.png
+  category: Network;WebBrowser
+  syncDesktopName: true
+  maintainer: NEXUS GX
+  target: [AppImage, deb]
+  desktop:
+    entry:
+      MimeType: 'text/html;x-scheme-handler/http;x-scheme-handler/https;'
+appImage:
+  artifactName: NEXUS-GX-x86_64.AppImage
+deb:
+  artifactName: nexus-gx_amd64.deb
