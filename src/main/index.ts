@@ -110,7 +110,7 @@ class Browser {
     contents.on('will-frame-navigate', event => event.preventDefault())
     contents.on('will-attach-webview', event => event.preventDefault())
     this.shortcuts(contents)
-    if (restore) this.tabs.push(...storage.data.tabs.map(makeTab))
+    if (restore) this.tabs.push(...storage.data.tabs.map(saved => makeTab(saved)))
     if (!this.tabs.length) this.tabs.push(makeTab())
     this.select((this.tabs[restore ? storage.data.active : 0] ?? this.tabs[0]).id)
     this.win.on('resize', () => this.layout())
