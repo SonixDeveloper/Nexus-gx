@@ -1,5 +1,9 @@
 name: NEXUS GX packages
-on: [push, pull_request, workflow_dispatch]
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
 permissions:
   contents: read
 jobs:
@@ -43,6 +47,14 @@ jobs:
           NEXUS_UPDATE_URL: ${{ vars.NEXUS_UPDATE_URL }}
           NEXUS_UPDATE_PUBLIC_KEY: ${{ vars.NEXUS_UPDATE_PUBLIC_KEY }}
       - if: runner.os == 'Linux'
+        uses: actions/upload-artifact@v6
+        with:
+          name: nexus-gx-Linux
+          if-no-files-found: error
+          path: |
+            release/NEXUS-GX-x86_64.AppImage
+            release/nexus-gx_amd64.deb
+      - if: runner.os == 'Linux'
         shell: bash
         run: |
           set -euo pipefail
@@ -52,12 +64,15 @@ jobs:
           flatpak install --user --noninteractive flathub org.freedesktop.Platform//25.08 org.freedesktop.Sdk//25.08 org.electronjs.Electron2.BaseApp//25.08
           flatpak-builder --user --force-clean --repo=flatpak-repo flatpak-build packaging/io.github.nexusgx.NexusGX.yml
           flatpak build-bundle flatpak-repo release/NEXUS-GX.flatpak io.github.nexusgx.NexusGX
-      - uses: actions/upload-artifact@v6
+      - if: runner.os == 'Linux'
+        uses: actions/upload-artifact@v6
         with:
-          name: nexus-gx-${{ runner.os }}
+          name: nexus-gx-Flatpak
           if-no-files-found: error
-          path: |
-            release/NEXUS-GX-Setup.exe
-            release/NEXUS-GX-x86_64.AppImage
-            release/nexus-gx_amd64.deb
-            release/NEXUS-GX.flatpak
+          path: release/NEXUS-GX.flatpak
+      - if: runner.os == 'Windows'
+        uses: actions/upload-artifact@v6
+        with:
+          name: nexus-gx-Windows
+          if-no-files-found: error
+          path: release/NEXUS-GX-Setup.exe
