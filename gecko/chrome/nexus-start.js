@@ -1,3 +1,4 @@
+/* global window, document, navigator */
 {
   const polish = navigator.language.toLowerCase().startsWith('pl')
   const locale = polish ? 'pl-PL' : navigator.language

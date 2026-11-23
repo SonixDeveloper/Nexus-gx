@@ -1,4 +1,4 @@
-/* global Services */
+/* global Services, NEXUS_PALETTES, window, document, navigator */
 {
   const prefName = 'nexusgx.appearance.palette'
   const apply = () => {
