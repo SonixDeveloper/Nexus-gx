@@ -2,7 +2,13 @@ export const presets = [
   ['Cyberpunk Neon', '#b9ff38', '#101117'], ['Dark Purple', '#bd9aff', '#181225'],
   ['Crimson Gaming', '#ff557a', '#201117'], ['Arctic Blue', '#68dfff', '#10202c'],
   ['Matrix Green', '#48ff90', '#091810'], ['RGB Rainbow', '#ff75ea', '#1b1224'],
-  ['OLED Black', '#e5acff', '#080808'], ['Minimal White', '#5634bb', '#f3f2f8']
+  ['OLED Black', '#e5acff', '#080808'], ['Minimal White', '#5634bb', '#f3f2f8'],
+  ['Solar Flare', '#ffbc66', '#23160f'], ['Glitch Pink', '#ff7fc5', '#211020'],
+  ['Deep Ocean', '#49e1ce', '#081d24'], ['Ultraviolet', '#bac0ff', '#112040'],
+  ['Copper Circuit', '#edab83', '#221a18'], ['Aurora', '#8df1b9', '#131737'],
+  ['Carbon Amber', '#ffd53e', '#18191c'], ['Mint Frost', '#006552', '#e8f6f0'],
+  ['Rose Quartz', '#922350', '#fcf0f3'], ['Paper Blue', '#2046a0', '#eef3fa'],
+  ['Midnight Sakura', '#ff9ea9', '#21161f'], ['Storm Grey', '#b9c9de', '#242a32']
 ] as const
 
 export const engines = { DuckDuckGo: 'https://duckduckgo.com/?q=', Google: 'https://www.google.com/search?q=', Bing: 'https://www.bing.com/search?q=' }
@@ -79,7 +85,7 @@ export type Command =
   | { type: 'bookmarkRemove'; url: string }
   | { type: 'permission'; permission: SitePermission; allow: boolean }
   | { type: 'exception'; allow: boolean }
-  | { type: 'back' | 'forward' | 'reload' | 'home' | 'restore' | 'bookmark' | 'copy' | 'private' | 'window' | 'fullscreen' | 'clear' | 'wallpaper' | 'removeWallpaper' | 'updateFilters' | 'defaultBrowser' | 'wipe' }
+  | { type: 'back' | 'forward' | 'reload' | 'home' | 'restore' | 'bookmark' | 'copy' | 'private' | 'window' | 'fullscreen' | 'clear' | 'wallpaper' | 'removeWallpaper' | 'updateFilters' | 'defaultBrowser' | 'spotifyExternal' | 'wipe' }
 export interface BrowserAPI {
   state(): Promise<Snapshot>
   command(command: Command): Promise<void>

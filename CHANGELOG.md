@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.1 — wersja rozwojowa
+
+- Dodano 12 motywów, w tym trzy jasne palety.
+- Dodano w karcie Spotify przekazanie bieżącej strony do przeglądarki zewnętrznej.
+
 ## 0.1.0 — wersja rozwojowa
 
 - Dodano kod desktopowej przeglądarki Electron z izolowanymi kartami Chromium.

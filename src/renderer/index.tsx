@@ -5,7 +5,7 @@ import { motion } from 'motion/react'
 import { ArrowLeft, ArrowRight, ArrowUpRight, Bookmark, ChevronDown, Clock3, Download, Gamepad2, Globe2, House, Menu, Palette, Plus, RotateCw, Search, Settings2, Shield, X, Zap, LockKeyhole, Radio, Pin, VolumeX, Moon, Youtube, Twitch, Music2, MessagesSquare } from 'lucide-react'
 import type { BrowserAPI, Command, Settings, Snapshot, Tab, Theme } from '../shared/model'
 import { defaults, engines, presets } from '../shared/model'
-import { originOf, readTheme, sitePermissions, webUrl } from '../shared/validation'
+import { originOf, readTheme, sitePermissions, spotifyPlayerUrl, webUrl } from '../shared/validation'
 import { parseBookmarks } from './bookmarks'
 import './style.css'
 
@@ -178,6 +178,7 @@ function App() {
   }
   const toggle = (label: string, key: 'animations' | 'vertical' | 'block' | 'history' | 'clearHistoryOnExit' | 'focusGaming' | 'clock' | 'shortcuts') =>
     <label className="setting"><span>{label}</span><input type="checkbox" checked={state[key]} onChange={event => update({ [key]: event.target.checked })} /></label>
+  const spotifyTab = Boolean(spotifyPlayerUrl(tab?.url))
   const origin = originOf(tab?.url)
   const secureOrigin = originOf(tab?.url, true)
   const permissionLabels = [tr('Kamera', 'Camera'), tr('Mikrofon', 'Microphone'), tr('Lokalizacja', 'Location'), tr('Powiadomienia', 'Notifications')]
@@ -225,6 +226,11 @@ function App() {
         </form>
         <IconButton icon={Shield} label={titles.privacy} onClick={() => openPanel('privacy')} />
       </div>
+      {spotifyTab && <div className="media-bar"><Music2 size={15} />
+        <span>{tr('Spotify · odtwarzanie muzyki wymaga obsługi DRM.', 'Spotify · music playback requires DRM support.')}</span>
+        {!privateMode && <button type="button" onClick={() => void send({ type: 'spotifyExternal' })}>{tr('Otwórz w domyślnej przeglądarce', 'Open in default browser')}</button>}
+      </div>}
+      {notice && <div className="notice-bar" role="status">{notice}<IconButton icon={X} label={tr('Zamknij', 'Close')} onClick={() => setNotice('')} /></div>}
       {find && <div className="find-bar"><input ref={findInput} placeholder={tr('Znajdź na stronie', 'Find in page')} aria-label={tr('Znajdź na stronie', 'Find in page')} onChange={event => void send({ type: 'find', value: event.target.value })} /><IconButton icon={X} label={tr('Zamknij', 'Close')} onClick={() => { setFind(false); void send({ type: 'find', value: '' }) }} /></div>}
     </header>
     <div className="body">
@@ -257,7 +263,7 @@ function App() {
         {panel && <section className="drawer" aria-label={titles[panel]}>
           <div className="drawer-head"><h2>{titles[panel]}</h2><IconButton icon={X} label={tr('Zamknij', 'Close')} onClick={() => setPanel(undefined)} /></div>
           {panel === 'theme' && <>
-            <div className="presets">{presets.map(([name, accent, background]) => <button key={name} className={state.theme.name === name ? 'chosen' : ''} onClick={() => theme({ name, accent, background, rainbow: name === 'RGB Rainbow' })}><i style={{ background: accent }} />{name}</button>)}</div>
+            <div className="presets">{presets.map(([name, accent, background]) => <button key={name} aria-pressed={state.theme.name === name} className={state.theme.name === name ? 'chosen' : ''} onClick={() => theme({ name, accent, background, rainbow: name === 'RGB Rainbow' })}><i style={{ background: accent, borderColor: background }} />{name}</button>)}</div>
             <label className="setting">{tr('Nazwa', 'Name')}<input key={state.theme.name} defaultValue={state.theme.name} maxLength={48} onBlur={event => theme({ name: event.target.value })} /></label>
             <label className="setting">{tr('Akcent', 'Accent')}<input type="color" value={state.theme.accent} onChange={event => theme({ accent: event.target.value })} /></label>
             <label className="setting">{tr('Tło', 'Background')}<input type="color" value={state.theme.background} onChange={event => theme({ background: event.target.value })} /></label>
@@ -393,7 +399,6 @@ function App() {
             {snapshot?.tabs.filter(item => (item.title + ' ' + item.url).toLowerCase().includes(filter.toLowerCase())).map(item => <button className="row" key={item.id} onClick={() => { void send({ type: 'select', id: item.id }); setPanel(undefined) }}>{item.title || item.url || tr('Nowa karta', 'New tab')}</button>)}
           </>}
         </section>}
-        {notice && <div className="notice" role="status">{notice}<IconButton icon={X} label={tr('Zamknij', 'Close')} onClick={() => setNotice('')} /></div>}
       </main>
       {state.sidebar === 'right' && rail}
     </div>

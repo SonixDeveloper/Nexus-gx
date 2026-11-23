@@ -6,7 +6,7 @@ import { mkdirSync, mkdtempSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { pathToFileURL } from 'node:url'
 import { defaults, type Command, type Download, type Snapshot, type Tab } from '../shared/model'
-import { originOf, readSettings, resolveAddress, sitePermissions, webUrl } from '../shared/validation'
+import { originOf, readSettings, resolveAddress, sitePermissions, spotifyPlayerUrl, webUrl } from '../shared/validation'
 import { Storage, visits, type SavedTab } from './storage'
 import { Filters } from './filters'
 import { Profiles } from './profiles'
@@ -573,6 +573,16 @@ class Browser {
           app.quit()
         }
         return
+      case 'spotifyExternal': {
+        if (this.privateMode) break
+        const url = spotifyPlayerUrl(tab?.url)
+        if (!url) break
+        const handler = await app.getApplicationInfoForProtocol(url)
+        if (app.isDefaultProtocolClient('https') || handler.name === app.getName())
+          throw new Error('Wybierz inną przeglądarkę domyślną obsługującą Spotify / Choose a different default browser that supports Spotify.')
+        await shell.openExternal(url)
+        break
+      }
       case 'defaultBrowser':
         if (!app.isPackaged) throw new Error('Install NEXUS GX before registering it')
         if (process.platform === 'win32') {

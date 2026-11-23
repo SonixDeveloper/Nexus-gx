@@ -82,3 +82,8 @@ export function blockedHost(host: string, entries: Set<string>) {
   const parts = host.toLowerCase().replace(/\.$/, '').split('.')
   return parts.some((_, index) => index < parts.length - 1 && entries.has(parts.slice(index).join('.')))
 }
+
+export function spotifyPlayerUrl(value: unknown): string | undefined {
+  const url = webUrl(value)
+  if (url && new URL(url).origin === 'https://open.spotify.com') return url
+}
