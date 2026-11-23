@@ -1,5 +1,7 @@
 # NEXUS GX
 
+Migracja na silnik Firefox ESR jest w [gecko](gecko/README.md). Poniżej opis dotychczasowej wersji 0.1.2.
+
 NEXUS GX 0.1.2 to kod wersji rozwojowej przeglądarki desktopowej opartej na Electron 45.4.1 i Chromium. Karty korzystają z natywnych widoków WebContentsView. Interfejs tworzą React, TypeScript, Vite, Tailwind CSS, Zustand, Motion i Lucide.
 
 ## Uruchomienie
