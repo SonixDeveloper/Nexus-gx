@@ -15,7 +15,7 @@ Skrypt sprawdza podpis manifestu SHA-512 kluczem wydawniczym Mozilla oraz sumę 
 
 ## Kompilacja
 
-Przygotuj środowisko według instrukcji [Mozilla dla Linuksa](https://firefox-source-docs.mozilla.org/setup/linux_build.html) lub [Mozilla dla Windows](https://firefox-source-docs.mozilla.org/setup/windows_build.html). Na Windows wykonuj polecenia w MozillaBuild. Na GitHub Actions konfiguracja automatycznie sprawdza przygotowanie Linux i udostępnia ręczne zadanie pełnej kompilacji po wprowadzeniu workflow na domyślną gałąź.
+Przygotuj środowisko według instrukcji [Mozilla dla Linuksa](https://firefox-source-docs.mozilla.org/setup/linux_build.html) lub [Mozilla dla Windows](https://firefox-source-docs.mozilla.org/setup/windows_build.html). Na Windows wykonuj polecenia w MozillaBuild. GitHub Actions automatycznie sprawdza przygotowanie źródeł i uruchamia pełną kompilację Linuksa dla PR z gałęzi migracji. Po wprowadzeniu workflow na domyślną gałąź można też uruchomić kompilację ręcznie.
 
 ```sh
 cd gecko/work/source

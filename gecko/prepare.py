@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Apply the NEXUS GX desktop overlay to a fresh Firefox ESR source tree."""
 import argparse
+import base64
 import json
 from pathlib import Path
 import re
@@ -32,6 +33,8 @@ def brand(source):
     target = branding / "nexusgx"
     shutil.copytree(branding / "unofficial", target)
     (target / "configure.sh").write_text(
+        "# This Source Code Form is subject to the terms of the Mozilla Public\n"
+        "# License, v. 2.0. You can obtain a copy at https://mozilla.org/MPL/2.0/.\n"
         "MOZ_APP_DISPLAYNAME='NEXUS GX'\nMOZ_MACBUNDLE_ID=nexusgx\n", encoding="utf-8"
     )
     for file in (target / "locales").rglob("brand.ftl"):
@@ -51,7 +54,6 @@ def brand(source):
         file = target / "content" / name
         if file.exists():
             shutil.copyfile(ROOT / "packaging/icon.png", file)
-    import base64
     icon = base64.b64encode((ROOT / "packaging/icon.png").read_bytes()).decode("ascii")
     for name in ("about-logo.svg", "about-wordmark.svg", "firefox-wordmark.svg"):
         file = target / "content" / name

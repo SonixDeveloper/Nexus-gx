@@ -28,12 +28,16 @@ jobs:
       - run: bash gecko/fetch-source.sh
       - run: python3 gecko/prepare.py gecko/work/source
   compile-linux:
-    if: github.event_name == 'workflow_dispatch' && inputs.compile
+    if: (github.event_name == 'workflow_dispatch' && inputs.compile) || (github.event_name == 'pull_request' && github.head_ref == 'nexus-gx-gecko' && github.event.pull_request.head.repo.full_name == github.repository)
     needs: prepare
     runs-on: ubuntu-24.04
     timeout-minutes: 180
     steps:
       - uses: actions/checkout@v6
+      - name: Free runner storage for the native build
+        run: |
+          sudo rm -rf -- /usr/local/lib/android /opt/ghc /usr/share/dotnet
+          df -h .
       - name: Install build prerequisites
         run: |
           sudo apt-get update
@@ -48,6 +52,11 @@ jobs:
           ./mach build
           ./mach package
           obj-nexus-gx/dist/bin/nexus-gx --version
+          mkdir -p "$RUNNER_TEMP/nexus-gecko-profile"
+          timeout 60 obj-nexus-gx/dist/bin/nexus-gx --headless --no-remote \
+            --profile "$RUNNER_TEMP/nexus-gecko-profile" --screenshot "$RUNNER_TEMP/nexus-gecko.png" \
+            'data:text/html,<title>NEXUS GX Gecko smoke test</title><h1>NEXUS GX</h1>'
+          test -s "$RUNNER_TEMP/nexus-gecko.png"
       - uses: actions/upload-artifact@v6
         with:
           name: nexus-gx-gecko-linux-x86_64
