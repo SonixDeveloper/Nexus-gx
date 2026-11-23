@@ -6,3 +6,6 @@ flatpak-build/
 flatpak-repo/
 
 site/downloads/
+
+gecko/work/
+gecko/**/__pycache__/
