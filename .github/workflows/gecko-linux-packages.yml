@@ -1,0 +1,97 @@
+name: NEXUS GX Gecko Linux installers
+on:
+  pull_request:
+    paths:
+      - 'gecko/packaging/**'
+      - '.github/workflows/gecko-linux-packages.yml'
+  workflow_dispatch:
+    inputs:
+      source_run:
+        description: Successful Gecko Linux build run in this repository
+        required: true
+        type: string
+permissions:
+  contents: read
+  actions: read
+jobs:
+  source:
+    if: github.event_name == 'workflow_dispatch' || (github.head_ref == 'nexus-gx-gecko-installers' && github.event.pull_request.head.repo.full_name == github.repository)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    outputs:
+      run: ${{ steps.wait.outputs.run }}
+    steps:
+      - name: Wait for the native Gecko archive
+        id: wait
+        env:
+          GH_TOKEN: ${{ github.token }}
+          UPSTREAM_RUN: ${{ inputs.source_run || '45281139943' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$UPSTREAM_RUN" =~ ^[0-9]+$ ]]
+          while true; do
+            details="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$UPSTREAM_RUN")"
+            jq -e '.path == ".github/workflows/gecko.yml" and .head_repository.full_name == .repository.full_name' <<<"$details" >/dev/null
+            if [[ "$(jq -r .status <<<"$details")" == completed ]]; then
+              jq -e '.conclusion == "success"' <<<"$details" >/dev/null
+              echo "run=$UPSTREAM_RUN" >> "$GITHUB_OUTPUT"
+              break
+            fi
+            sleep 45
+          done
+  installers:
+    needs: source
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        format: [deb, appimage, flatpak]
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/download-artifact@v7
+        with:
+          name: nexus-gx-gecko-linux-x86_64
+          run-id: ${{ needs.source.outputs.run }}
+          github-token: ${{ github.token }}
+          path: native-gecko
+      - name: Set up Flatpak runtime
+        if: matrix.format == 'flatpak'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y flatpak flatpak-builder
+          flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+          flatpak install --user --noninteractive flathub org.freedesktop.Platform//25.08 org.freedesktop.Sdk//25.08
+      - name: Fetch and verify AppImage tooling
+        if: matrix.format == 'appimage'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP"
+          fetch_asset() {
+            local project="$1" tag="$2" asset="$3" digest
+            digest="$(gh api "repos/$project/releases/tags/$tag" --jq '.assets[] | select(.name == "'"$asset"'") | .digest')"
+            [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]]
+            gh release download "$tag" --repo "$project" --pattern "$asset"
+            printf '%s  %s\n' "${digest#sha256:}" "$asset" | sha256sum --check -
+          }
+          fetch_asset AppImage/appimagetool 1.9.1 appimagetool-x86_64.AppImage
+          fetch_asset AppImage/type2-runtime 20251108 runtime-x86_64
+          chmod 0755 appimagetool-x86_64.AppImage
+          echo "APPIMAGETOOL=$RUNNER_TEMP/appimagetool-x86_64.AppImage" >> "$GITHUB_ENV"
+          echo "APPIMAGE_RUNTIME=$RUNNER_TEMP/runtime-x86_64" >> "$GITHUB_ENV"
+      - name: Create installer
+        env:
+          PACKAGE_FORMAT: ${{ matrix.format }}
+        run: |
+          set -euo pipefail
+          mapfile -t archives < <(find native-gecko -type f -name '*.tar.*')
+          test "${#archives[@]}" -eq 1
+          bash gecko/packaging/package-linux.sh "${archives[0]}" gecko-installers "$PACKAGE_FORMAT"
+      - uses: actions/upload-artifact@v6
+        with:
+          name: nexus-gx-gecko-${{ matrix.format }}-x86_64
+          if-no-files-found: error
+          path: gecko-installers/*

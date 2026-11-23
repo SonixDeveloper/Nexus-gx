@@ -34,3 +34,9 @@ Na Windows natywny instalator tworzy `./mach installer` po `./mach package`. Pak
 - Logowanie Mozilla i synchronizacja wymagają autoryzacji i testów na oddzielnym profilu NEXUS GX.
 - Własny mechanizm aktualizacji wymaga osobnej infrastruktury. Wersja rozwojowa nie przyjmuje aktualizacji binarnych Firefox i nie jest wydaniem produkcyjnym.
 - Testy przygotowania nakładki uruchamia `python3 -m unittest discover -s gecko/tests`. Wydajność Gecko i Electron należy porównać na tych samych stronach i na tym samym sprzęcie.
+
+## Instalatory Gecko dla Linuksa
+
+CI pakuje ten sam natywny build do `nexus-gx-gecko_amd64.deb`, `NEXUS-GX-Gecko-x86_64.AppImage` i `NEXUS-GX-Gecko.flatpak`. Skrypt pakuje wyłącznie archiwum zawierające binarkę NEXUS GX i bibliotekę Gecko. Pakiety pojawiają się w artefaktach po osobnych zadaniach CI. Flatpak używa osobnego identyfikatora `com.sonixdeveloper.nexusgx` i runtime Freedesktop 25.08. Plik AppImage zachowuje zależności systemowe Gecko.
+
+Przykład instalacji DEB po pobraniu paczki to `sudo apt install ./nexus-gx-gecko_amd64.deb`. Flatpak instalujesz poleceniem `flatpak install --user ./NEXUS-GX-Gecko.flatpak`. AppImage uruchamiasz po nadaniu mu uprawnienia wykonywania.
