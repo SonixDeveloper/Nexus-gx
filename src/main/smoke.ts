@@ -1,4 +1,8 @@
 import assert from 'node:assert/strict'
+import { mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import type { Extensions } from './extensions'
 import { once } from 'node:events'
 import { createServer } from 'node:http'
 import { setTimeout as pause } from 'node:timers/promises'
@@ -13,7 +17,7 @@ interface BrowserForTest {
   execute(command: import('../shared/model').Command): Promise<void>
 }
 
-export async function runSmoke(browser: BrowserForTest, privateSessionForTest: () => Electron.Session | undefined) {
+export async function runSmoke(browser: BrowserForTest, privateSessionForTest: () => Electron.Session | undefined, extensions: Extensions) {
   const ui = browser.win.webContents
   await browser.ready
   assert.equal(await ui.executeJavaScript('typeof window.nexus.state'), 'function')
@@ -40,6 +44,18 @@ export async function runSmoke(browser: BrowserForTest, privateSessionForTest: (
     server.closeAllConnections()
     server.close()
   }
+  const extensionFolder = await mkdtemp(join(tmpdir(), 'nexus-extension-smoke-'))
+  try {
+    await writeFile(join(extensionFolder, 'manifest.json'), JSON.stringify({
+      manifest_version: 3, name: 'NEXUS smoke extension', version: '1.0.0',
+      content_scripts: [{ matches: ['https://example.com/*'], js: ['content.js'] }]
+    }))
+    await writeFile(join(extensionFolder, 'content.js'), "document.documentElement.dataset.nexusExtension = 'active'")
+    await extensions.install(extensionFolder, async (_name, permissions) => permissions.includes('https://example.com/*'))
+  } finally {
+    await rm(extensionFolder, { recursive: true, force: true })
+  }
+  assert.equal(browser.snapshot().extensions[0]?.active, true)
   await browser.ses.cookies.set({ url: 'https://example.com/', name: 'nexus-test', value: 'normal' })
   await browser.execute({ type: 'private' })
   const privateWindow = BrowserWindow.getAllWindows().find(win => win !== browser.win)
@@ -51,6 +67,7 @@ export async function runSmoke(browser: BrowserForTest, privateSessionForTest: (
   assert.ok(privateSession)
   assert.notEqual(privateSession, browser.ses)
   assert.equal(privateSession.getStoragePath(), null)
+  assert.equal(privateSession.extensions.getAllExtensions().some(extension => extension.name === 'NEXUS smoke extension'), false)
   assert.equal((await privateSession.cookies.get({ name: 'nexus-test' })).length, 0)
   privateWindow.close()
   await browser.execute({ type: 'navigate', value: 'https://example.com/' })
@@ -58,6 +75,9 @@ export async function runSmoke(browser: BrowserForTest, privateSessionForTest: (
   assert.ok(page)
   if (page.isLoading()) await once(page, 'did-stop-loading')
   assert.equal(page.getURL(), 'https://example.com/')
+  assert.equal(await page.executeJavaScript('document.documentElement.dataset.nexusExtension'), 'active')
+  await browser.execute({ type: 'removeExtension', id: browser.snapshot().extensions[0].id })
+  assert.equal(browser.snapshot().extensions.length, 0)
   assert.equal(await page.executeJavaScript('[typeof window.nexus, typeof window.require].join(",")'), 'undefined,undefined')
   assert.equal(browser.snapshot().history[0]?.url, 'https://example.com/')
   await browser.execute({ type: 'bookmark' })

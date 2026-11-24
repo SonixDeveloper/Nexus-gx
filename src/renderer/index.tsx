@@ -2,7 +2,7 @@ import { createRoot } from 'react-dom/client'
 import { useEffect, useLayoutEffect, useRef, useState, type FormEvent, type CSSProperties } from 'react'
 import { create } from 'zustand'
 import { motion } from 'motion/react'
-import { ArrowLeft, ArrowRight, ArrowUpRight, Bookmark, ChevronDown, Clock3, Download, Gamepad2, Globe2, House, Menu, Palette, Plus, RotateCw, Search, Settings2, Shield, X, Zap, LockKeyhole, Radio, Pin, VolumeX, Moon, Youtube, Twitch, Music2, MessagesSquare } from 'lucide-react'
+import { ArrowLeft, ArrowRight, ArrowUpRight, Bookmark, ChevronDown, Clock3, Download, Gamepad2, Globe2, House, Menu, Palette, Plus, RotateCw, Search, Settings2, Shield, X, Zap, LockKeyhole, Radio, Pin, VolumeX, Moon, Youtube, Twitch, Music2, MessagesSquare, Puzzle } from 'lucide-react'
 import type { BrowserAPI, Command, Settings, Snapshot, Tab, Theme } from '../shared/model'
 import { defaults, engines, presets } from '../shared/model'
 import { originOf, readTheme, sitePermissions, spotifyPlayerUrl, webUrl } from '../shared/validation'
@@ -11,7 +11,7 @@ import './style.css'
 
 declare global { interface Window { nexus: BrowserAPI } }
 const useBrowser = create<{ snapshot?: Snapshot; set: (snapshot: Snapshot) => void }>(set => ({ set: snapshot => set({ snapshot }) }))
-type Panel = 'menu' | 'theme' | 'gaming' | 'privacy' | 'history' | 'bookmarks' | 'downloads' | 'settings'
+type Panel = 'menu' | 'theme' | 'gaming' | 'privacy' | 'history' | 'bookmarks' | 'downloads' | 'extensions' | 'settings'
 const services = [
   [MessagesSquare, 'Discord', 'https://discord.com/app', '#a193ff'],
   [Twitch, 'Twitch', 'https://www.twitch.tv/', '#c289ff'],
@@ -174,7 +174,7 @@ function App() {
   const custom = { '--accent': state.theme.accent, '--base': color, '--scale': state.scale / 100, '--radius': state.theme.rounded ? '13px' : '2px', '--glow': state.theme.glow / 100, '--glass': state.theme.glass + '%', '--address-radius': state.theme.addressRounded ? '13px' : '2px' } as CSSProperties
   const titles: Record<Panel, string> = {
     menu: 'NEXUS GX', theme: 'NEXUS Theme Studio', gaming: 'Gaming Control Center', privacy: tr('Prywatność', 'Privacy'),
-    history: tr('Historia', 'History'), bookmarks: tr('Zakładki', 'Bookmarks'), downloads: tr('Pobrane pliki', 'Downloads'), settings: tr('Ustawienia', 'Settings')
+    history: tr('Historia', 'History'), bookmarks: tr('Zakładki', 'Bookmarks'), downloads: tr('Pobrane pliki', 'Downloads'), extensions: tr('Rozszerzenia', 'Extensions'), settings: tr('Ustawienia', 'Settings')
   }
   const toggle = (label: string, key: 'animations' | 'vertical' | 'block' | 'httpsOnly' | 'history' | 'clearHistoryOnExit' | 'focusGaming' | 'clock' | 'shortcuts') =>
     <label className="setting"><span>{label}</span><input type="checkbox" checked={state[key]} onChange={event => update({ [key]: event.target.checked })} /></label>
@@ -206,6 +206,7 @@ function App() {
       {state.customShortcuts.map(({ label, url }, index) => <IconButton key={index} icon={Globe2} label={label} onClick={() => { setPanel(undefined); void send({ type: 'new', url }) }} />)}
     </div>
     <span className="spacer" />
+    {!privateMode && <IconButton icon={Puzzle} label={titles.extensions} active={panel === 'extensions'} onClick={() => openPanel('extensions')} />}
     <IconButton icon={Settings2} label={titles.settings} active={panel === 'settings'} onClick={() => openPanel('settings')} />
   </aside>
 
@@ -374,6 +375,12 @@ function App() {
                 {['progressing', 'interrupted'].includes(entry.status) && <button onClick={() => void send({ type: 'cancel', id: entry.id })}>{tr('Anuluj', 'Cancel')}</button>}
               </div>
             </div>)}
+          </>}
+          {panel === 'extensions' && <>
+            <p>{tr('Wybierz wypakowany dodatek Chromium z plikiem manifest.json. NEXUS GX obsługuje część API rozszerzeń Electron.', 'Select an unpacked Chromium extension containing manifest.json. NEXUS GX supports part of Electron’s extension APIs.')}</p>
+            <div className="actions"><button onClick={() => void send({ type: 'installExtension' })}>{tr('Wczytaj lokalny dodatek', 'Load a local extension')}</button></div>
+            {!snapshot?.extensions.length && <p>{tr('Brak rozszerzeń.', 'No extensions.')}</p>}
+            {snapshot?.extensions.map(item => <div className="setting" key={item.id}><span>{item.name}<small>{item.active ? item.version : tr('Błąd ładowania', 'Load failed')}</small></span><button onClick={() => void send({ type: 'removeExtension', id: item.id })}>{tr('Usuń', 'Remove')}</button></div>)}
           </>}
           {panel === 'settings' && <>
             {toggle(tr('Animacje', 'Animations'), 'animations')}

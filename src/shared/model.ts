@@ -55,6 +55,7 @@ export const defaults: Settings = {
   block: true, httpsOnly: false, history: false, clearHistoryOnExit: false, exceptions: [], permissions: {}, clock: true, shortcuts: true
 }
 export interface Visit { url: string; title: string; at: number; folder?: string }
+export interface InstalledExtension { id: string; name: string; version: string; active: boolean }
 export interface Download { id: string; name: string; status: string; bytes: number; total: number; available?: boolean }
 export interface Tab {
   id: string; url: string; title: string; loading: boolean; back: boolean; forward: boolean;
@@ -68,12 +69,14 @@ export interface Snapshot {
   platform: 'windows' | 'linux' | 'other'
   workspace: string
   workspaces: string[]
+  extensions: InstalledExtension[]
   profileId: string
   profiles: Array<{ id: string; name: string }>
 }
 export type Command =
   | { type: 'new'; url?: string }
   | { type: 'select' | 'close' | 'pin' | 'mute' | 'sleep' | 'cancel' | 'openDownload' | 'showDownload'; id: string }
+  | { type: 'removeExtension'; id: string }
   | { type: 'move'; id: string; before: string }
   | { type: 'group'; id: string; value: string }
   | { type: 'navigate' | 'find'; value: string }
@@ -87,7 +90,7 @@ export type Command =
   | { type: 'bookmarkRemove'; url: string }
   | { type: 'permission'; permission: SitePermission; allow: boolean }
   | { type: 'exception'; allow: boolean }
-  | { type: 'back' | 'forward' | 'reload' | 'home' | 'restore' | 'bookmark' | 'copy' | 'private' | 'window' | 'fullscreen' | 'clear' | 'wallpaper' | 'removeWallpaper' | 'updateFilters' | 'defaultBrowser' | 'spotifyExternal' | 'wipe' }
+  | { type: 'back' | 'forward' | 'reload' | 'home' | 'restore' | 'bookmark' | 'copy' | 'private' | 'window' | 'fullscreen' | 'clear' | 'wallpaper' | 'removeWallpaper' | 'updateFilters' | 'defaultBrowser' | 'installExtension' | 'spotifyExternal' | 'wipe' }
 export interface BrowserAPI {
   state(): Promise<Snapshot>
   command(command: Command): Promise<void>

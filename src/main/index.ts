@@ -9,6 +9,7 @@ import { defaults, type Command, type Download, type Snapshot, type Tab } from '
 import { originOf, readSettings, resolveAddress, sitePermissions, spotifyPlayerUrl, webUrl } from '../shared/validation'
 import { Storage, visits, type SavedTab } from './storage'
 import { Filters } from './filters'
+import { Extensions } from './extensions'
 import { Profiles } from './profiles'
 import { checkUpdates, updateConfigured } from './updates'
 
@@ -25,6 +26,7 @@ const ui = 'nexus-ui://browser/index.html'
 const smoke = !app.isPackaged && process.argv.includes('--nexus-smoke')
 const windows = new Map<number, Browser>()
 let storage: Storage
+let extensions: Extensions
 let profiles: Profiles
 let filters: Filters
 let primary: Browser | undefined
@@ -143,6 +145,7 @@ class Browser {
         ({ id, url, title, loading, back, forward, pinned, muted, sleeping, group, workspace, error })),
       active: this.active, platform: process.platform === 'win32' ? 'windows' : process.platform === 'linux' ? 'linux' : 'other', workspace: this.tab?.workspace ?? '', workspaces: this.workspaces, private: this.privateMode, settings: storage.data.settings,
       history: this.privateMode || !storage.data.settings.history ? [] : storage.data.history, bookmarks: storage.data.bookmarks,
+      extensions: this.privateMode ? [] : extensions.list(),
       downloads: [...this.downloads.values()].map(entry => entry.info), blocked: this.blocked,
       filterTime: filters.updated, filtersLoaded: filters.loaded, version: app.getVersion(), wallpaperRevision, updateConfigured, profileId: profiles.active, profiles: profiles.entries
     }
@@ -571,6 +574,33 @@ class Browser {
         storage.flush()
         break
       }
+      case 'installExtension': {
+        if (this.privateMode) break
+        const pl = storage.data.settings.language === 'pl'
+        const folder = await dialog.showOpenDialog(this.win, {
+          title: pl ? 'Wybierz folder dodatku z manifest.json' : 'Select an extension folder containing manifest.json',
+          properties: ['openDirectory']
+        })
+        if (!folder.canceled && folder.filePaths[0]) {
+          await extensions.install(folder.filePaths[0], async (name, permissions) => {
+            const answer = await dialog.showMessageBox(this.win, {
+              type: 'warning',
+              message: pl ? 'Wczytać lokalne rozszerzenie?' : 'Load this local extension?',
+              detail: name + '\n\n' + (pl
+                ? 'Wczytuj dodatki tylko z zaufanego źródła. Dostęp do witryn wynika z uprawnień dodatku.'
+                : 'Only load extensions from a trusted source. Site access depends on extension permissions.')
+                + (permissions.length ? '\n\n' + permissions.slice(0, 30).join('\n').slice(0, 1500) : ''),
+              buttons: [pl ? 'Anuluj' : 'Cancel', pl ? 'Wczytaj' : 'Load'],
+              defaultId: 0, cancelId: 0
+            })
+            return answer.response === 1
+          })
+        }
+        break
+      }
+      case 'removeExtension':
+        if (!this.privateMode && typeof command.id === 'string') await extensions.remove(command.id)
+        break
       case 'openDownload':
       case 'showDownload': {
         const entry = this.downloads.get(command.id)
@@ -692,7 +722,7 @@ async function main() {
   app.setPath('userData', profiles.load(profile))
   if (!smoke && !app.requestSingleInstanceLock()) { app.quit(); return }
   app.on('second-instance', (_event, args) => {
-    void app.whenReady().then(() => { if (storage) { launchLink(args); primary?.win.focus() } })
+    void app.whenReady().then(() => { if (primary) { launchLink(args); primary.win.focus() } })
   })
   await app.whenReady()
   session.fromPartition('nexus-ui').protocol.handle('nexus-ui', request => {
@@ -705,6 +735,10 @@ async function main() {
   storage = new Storage(app.getPath('userData'))
   filters = new Filters(app.getPath('userData'))
   await filters.load()
+  const browsing = session.fromPartition('persist:nexus-web')
+  setupSession(browsing)
+  extensions = new Extensions(app.getPath('userData'), browsing)
+  await extensions.restore()
   wallpaperPath = join(app.getPath('userData'), 'wallpaper')
   try {
     const { mime, bytes } = await readWallpaper(wallpaperPath)
@@ -726,7 +760,7 @@ async function main() {
   primary = new Browser(false, true)
   if (smoke) {
     const { runSmoke } = await import('./smoke')
-    await runSmoke(primary, () => [...windows.values()].find(browser => browser.privateMode)?.ses)
+    await runSmoke(primary, () => [...windows.values()].find(browser => browser.privateMode)?.ses, extensions)
     app.quit()
     return
   }

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.4
+
+- Dodano panel lokalnych rozszerzeń Chromium z potwierdzeniem uprawnień, trwałą instalacją w profilu i usuwaniem dodatków.
+
 ## 0.1.3
 
 - Historia i zapis sesji wymagają włączenia przez użytkownika. Aktualizacja usuwa poprzednią historię i zapis sesji, a zakładki pozostają dostępne.
