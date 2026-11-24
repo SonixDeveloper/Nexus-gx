@@ -1,10 +1,11 @@
 import { readFileSync, writeFileSync, renameSync } from 'node:fs'
 import { join } from 'node:path'
-import { readSettings, webUrl } from '../shared/validation'
+import { readSettings, webUrl } from '../shared/validation.ts'
 import type { Settings, Visit } from '../shared/model'
 
 export interface SavedTab { url: string; pinned: boolean; muted: boolean; group: string; workspace?: string }
 interface SavedData {
+  historyPolicy: 1
   settings: Settings
   tabs: SavedTab[]
   active: number
@@ -30,11 +31,17 @@ export class Storage {
     this.path = join(root, 'nexus-state.json')
     let raw: Partial<SavedData> = {}
     try { raw = JSON.parse(readFileSync(this.path, 'utf8')) ?? {} } catch { /* First run or damaged state. */ }
+    const settings = readSettings(raw.settings)
+    // Earlier versions enabled history by default, so a saved true value was ambiguous.
+    if (raw.historyPolicy !== 1) settings.history = false
     this.data = {
-      settings: readSettings(raw.settings), history: visits(raw.history), bookmarks: visits(raw.bookmarks),
-      tabs: Array.isArray(raw.tabs) ? raw.tabs.slice(0, 100).filter(tab => tab && (tab.url === '' || webUrl(tab.url))) : [],
-      active: Number.isInteger(raw.active) ? raw.active! : 0
+      historyPolicy: 1, settings, history: settings.history ? visits(raw.history) : [],
+      bookmarks: visits(raw.bookmarks),
+      tabs: settings.history && Array.isArray(raw.tabs)
+        ? raw.tabs.slice(0, 100).filter(tab => tab && (tab.url === '' || webUrl(tab.url))) : [],
+      active: settings.history && Number.isInteger(raw.active) ? raw.active! : 0
     }
+    if (raw.settings && (!settings.history || raw.historyPolicy !== 1)) this.flush()
   }
 
   schedule() {

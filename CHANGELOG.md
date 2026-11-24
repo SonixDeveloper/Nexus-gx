@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.3
+
+- Historia i zapis sesji wymagają włączenia przez użytkownika. Aktualizacja usuwa poprzednią historię i zapis sesji, a zakładki pozostają dostępne.
+- Nazwa ukończonego pobrania otwiera plik. Panel może również pokazać plik w folderze.
+- Strona błędu wskazuje, kiedy nawigację blokują ustawienia lokalne.
+
 ## 0.1.2 — wersja rozwojowa
 
 - Dodano dostęp do oficjalnego Proton VPN, sprawdzania IP i konta Mozilla z panelu Prywatność.

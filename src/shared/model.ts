@@ -52,10 +52,10 @@ export interface Settings {
 export const defaults: Settings = {
   theme: defaultTheme, savedThemes: [], customShortcuts: [], animations: true, scale: 100, sidebar: 'left', vertical: false,
   language: 'pl', engine: 'DuckDuckGo', profile: 'BALANCED', sleepMinutes: 15, focusGaming: false,
-  block: true, httpsOnly: false, history: true, clearHistoryOnExit: false, exceptions: [], permissions: {}, clock: true, shortcuts: true
+  block: true, httpsOnly: false, history: false, clearHistoryOnExit: false, exceptions: [], permissions: {}, clock: true, shortcuts: true
 }
 export interface Visit { url: string; title: string; at: number; folder?: string }
-export interface Download { id: string; name: string; status: string; bytes: number; total: number }
+export interface Download { id: string; name: string; status: string; bytes: number; total: number; available?: boolean }
 export interface Tab {
   id: string; url: string; title: string; loading: boolean; back: boolean; forward: boolean;
   pinned: boolean; muted: boolean; sleeping: boolean; group: string; workspace: string; error: string
@@ -73,7 +73,7 @@ export interface Snapshot {
 }
 export type Command =
   | { type: 'new'; url?: string }
-  | { type: 'select' | 'close' | 'pin' | 'mute' | 'sleep' | 'cancel'; id: string }
+  | { type: 'select' | 'close' | 'pin' | 'mute' | 'sleep' | 'cancel' | 'openDownload' | 'showDownload'; id: string }
   | { type: 'move'; id: string; before: string }
   | { type: 'group'; id: string; value: string }
   | { type: 'navigate' | 'find'; value: string }

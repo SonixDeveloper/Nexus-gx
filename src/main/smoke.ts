@@ -24,6 +24,7 @@ export async function runSmoke(browser: BrowserForTest, privateSessionForTest: (
     await pause(50)
   }
   assert.equal(await ui.executeJavaScript('document.querySelector(".address input")?.tagName'), 'INPUT')
+  assert.equal(browser.snapshot().settings.history, false)
   const server = createServer((_request, response) => { response.end('NEXUS HTTPS-only test') })
   server.listen(0, '127.0.0.1')
   await once(server, 'listening')
@@ -32,7 +33,7 @@ export async function runSmoke(browser: BrowserForTest, privateSessionForTest: (
   const plaintext = 'http://127.0.0.1:' + local.port
   try {
     assert.equal(await (await browser.ses.fetch(plaintext)).text(), 'NEXUS HTTPS-only test')
-    await browser.execute({ type: 'settings', value: { ...browser.snapshot().settings, language: 'en', scale: 115, httpsOnly: true } })
+    await browser.execute({ type: 'settings', value: { ...browser.snapshot().settings, language: 'en', scale: 115, httpsOnly: true, history: true } })
     assert.equal(browser.snapshot().settings.scale, 115)
     await assert.rejects(browser.ses.fetch(plaintext), /ERR_BLOCKED_BY_CLIENT/)
   } finally {
@@ -65,6 +66,8 @@ export async function runSmoke(browser: BrowserForTest, privateSessionForTest: (
   assert.equal(browser.snapshot().tabs.length, 1)
   await browser.execute({ type: 'restore' })
   assert.equal(browser.snapshot().tabs.length, 2)
+  await browser.execute({ type: 'settings', value: { ...browser.snapshot().settings, history: false } })
+  assert.equal(browser.snapshot().history.length, 0)
   await browser.execute({ type: 'clear' })
   assert.equal(browser.snapshot().history.length, 0)
   console.log('Chromium navigation, IPC isolation, bookmarks, tabs and history passed')

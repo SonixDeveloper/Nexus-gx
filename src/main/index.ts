@@ -1,7 +1,7 @@
 import { app, BrowserWindow, clipboard, dialog, ipcMain, Menu, net, protocol, session, shell, webContents, WebContentsView, type DownloadItem, type IpcMainInvokeEvent, type Session, type WebContents } from 'electron'
 import { randomUUID } from 'node:crypto'
-import { readFile, writeFile, rename, stat, rm } from 'node:fs/promises'
-import { join } from 'node:path'
+import { readFile, writeFile, rename, stat, lstat, rm } from 'node:fs/promises'
+import { basename, extname, isAbsolute, join } from 'node:path'
 import { mkdirSync, mkdtempSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { pathToFileURL } from 'node:url'
@@ -90,7 +90,7 @@ class Browser {
   readonly ready: Promise<void>
   readonly tabs: LiveTab[] = []
   readonly closedTabs: SavedTab[] = []
-  readonly downloads = new Map<string, { item?: DownloadItem; info: Download }>()
+  readonly downloads = new Map<string, { item?: DownloadItem; info: Download; path?: string }>()
   active = ''
   blocked = 0
   bounds: Omit<Extract<Command, { type: 'bounds' }>, 'type'> = { x: 0, y: 0, right: 0, visible: false }
@@ -142,7 +142,7 @@ class Browser {
       tabs: this.tabs.map(({ id, url, title, loading, back, forward, pinned, muted, sleeping, group, workspace, error }) =>
         ({ id, url, title, loading, back, forward, pinned, muted, sleeping, group, workspace, error })),
       active: this.active, platform: process.platform === 'win32' ? 'windows' : process.platform === 'linux' ? 'linux' : 'other', workspace: this.tab?.workspace ?? '', workspaces: this.workspaces, private: this.privateMode, settings: storage.data.settings,
-      history: this.privateMode ? [] : storage.data.history, bookmarks: storage.data.bookmarks,
+      history: this.privateMode || !storage.data.settings.history ? [] : storage.data.history, bookmarks: storage.data.bookmarks,
       downloads: [...this.downloads.values()].map(entry => entry.info), blocked: this.blocked,
       filterTime: filters.updated, filtersLoaded: filters.loaded, version: app.getVersion(), wallpaperRevision, updateConfigured, profileId: profiles.active, profiles: profiles.entries
     }
@@ -159,6 +159,7 @@ class Browser {
 
   persist() {
     if (this.privateMode || primary !== this) return
+    if (!storage.data.settings.history) return
     storage.data.tabs = this.tabs.map(({ url, pending, pinned, muted, group, workspace }) => ({ url: pending ?? url, pinned, muted, group, workspace }))
     storage.data.active = this.tabs.findIndex(tab => tab.id === this.active)
     storage.schedule()
@@ -400,14 +401,24 @@ class Browser {
   download(item: DownloadItem) {
     const id = randomUUID()
     item.setSaveDialogOptions({ title: 'NEXUS GX' })
-    const info = { id, name: item.getFilename(), status: 'progressing', bytes: 0, total: item.getTotalBytes() }
+    const info: Download = { id, name: item.getFilename(), status: 'progressing', bytes: 0, total: item.getTotalBytes() }
     this.downloads.set(id, { item, info })
     item.on('updated', (_event, state) => { info.status = state; info.bytes = item.getReceivedBytes(); this.notify() })
     item.once('done', (_event, state) => {
       info.status = state
       info.bytes = item.getReceivedBytes()
       const entry = this.downloads.get(id)
-      if (entry) entry.item = undefined
+      if (entry) {
+        entry.item = undefined
+        if (state === 'completed') {
+          const path = item.getSavePath()
+          if (isAbsolute(path)) {
+            entry.path = path
+            info.name = basename(path)
+            info.available = true
+          }
+        }
+      }
       this.notify()
     })
     this.notify()
@@ -469,7 +480,12 @@ class Browser {
       case 'settings': {
         const { permissions, exceptions } = storage.data.settings
         storage.data.settings = { ...readSettings(command.value), permissions, exceptions }
-        storage.schedule()
+        if (!storage.data.settings.history) {
+          storage.data.history = []
+          storage.data.tabs = []
+          storage.data.active = 0
+          storage.flush()
+        } else storage.schedule()
         break
       }
       case 'permission': {
@@ -484,7 +500,7 @@ class Browser {
         break
       }
       case 'exception': {
-        const origin = originOf(contents?.getURL() ?? tab?.url)
+        const origin = originOf(tab?.error ? tab.url : contents?.getURL() || tab?.url)
         if (!origin || this.privateMode) break
         const entries = new Set(storage.data.settings.exceptions)
         if (command.allow === true) entries.add(origin)
@@ -553,6 +569,34 @@ class Browser {
         wallpaperRevision++
         Object.assign(storage.data, { history: [], bookmarks: [], settings: readSettings(defaults) })
         storage.flush()
+        break
+      }
+      case 'openDownload':
+      case 'showDownload': {
+        const entry = this.downloads.get(command.id)
+        const path = entry?.path
+        if (!entry || !path || entry.info.status !== 'completed') break
+        const file = await lstat(path).catch(() => undefined)
+        const pl = storage.data.settings.language === 'pl'
+        if (!file?.isFile()) throw new Error(pl ? 'Pobrany plik jest niedostępny.' : 'The downloaded file is unavailable.')
+        if (command.type === 'showDownload') {
+          shell.showItemInFolder(path)
+          break
+        }
+        const executable = Boolean(file.mode & 0o111) && process.platform !== 'win32'
+        const launchesCode = /^(?:exe|msi|msp|com|bat|cmd|ps1|sh|appimage|desktop|lnk|url|scr|vbs|js|jar|reg|deb|rpm|flatpak|appx|msix|hta|apk|cpl|chm|scf|shb|settingcontent-ms|wsh|wsf|msc)$/i.test(extname(path).slice(1))
+        if (executable || launchesCode) {
+          const result = await dialog.showMessageBox(this.win, {
+            type: 'warning',
+            message: pl ? 'Otworzyć pobrany plik?' : 'Open this downloaded file?',
+            detail: entry.info.name,
+            buttons: [pl ? 'Anuluj' : 'Cancel', pl ? 'Otwórz' : 'Open'],
+            defaultId: 0, cancelId: 0
+          })
+          if (result.response !== 1) break
+        }
+        const error = await shell.openPath(path)
+        if (error) throw new Error(error)
         break
       }
       case 'cancel': {

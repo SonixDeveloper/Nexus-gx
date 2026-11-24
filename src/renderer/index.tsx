@@ -186,6 +186,9 @@ function App() {
     : snapshot?.platform === 'linux' ? 'https://protonvpn.com/download-linux' : 'https://protonvpn.com/download'
   const spotifyTab = Boolean(spotifyPlayerUrl(tab?.url))
   const origin = originOf(tab?.url)
+  const blockedByClient = tab?.error === 'ERR_BLOCKED_BY_CLIENT'
+  const blockedByHttps = blockedByClient && state.httpsOnly && tab?.url.startsWith('http:')
+  const blockedByFilter = blockedByClient && !blockedByHttps && state.block
   const secureOrigin = originOf(tab?.url, true)
   const permissionLabels = [tr('Kamera', 'Camera'), tr('Mikrofon', 'Microphone'), tr('Lokalizacja', 'Location'), tr('Powiadomienia', 'Notifications')]
   const activeContext = snapshot?.tabs.find(item => item.id === context)
@@ -248,7 +251,10 @@ function App() {
             {background && (background.mime.startsWith('video/') ? <video key={background.src} src={background.src} loop muted autoPlay={animated} playsInline ref={element => { if (element) { if (!animated) element.pause(); else void element.play().catch(() => {}) } }} /> : (animated || background.mime !== 'image/gif') && <img src={background.src} alt="" />)}
             <div className="grid-plane" /><div className="orbit orbit-one" /><div className="orbit orbit-two" /><div className="orbit orbit-three" />
           </div>
-          {tab?.error ? <section className="error-box"><Shield size={36} /><h1>{tr('Nie udało się otworzyć strony', 'Could not open this page')}</h1><p>{tab.error}</p><button className="solid" onClick={() => void send({ type: 'reload' })}>{tr('Spróbuj ponownie', 'Try again')}</button></section> :
+          {tab?.error ? <section className="error-box"><Shield size={36} /><h1>{tr('Nie udało się otworzyć strony', 'Could not open this page')}</h1><p>{blockedByHttps ? tr('Tryb HTTPS blokuje ten nieszyfrowany adres HTTP.', 'HTTPS-only mode blocks this unencrypted HTTP address.') :
+            blockedByFilter ? tr('Filtr NEXUS GX zablokował tę stronę.', 'The NEXUS GX filter blocked this page.') : tab.error}</p>
+            <button className="solid" onClick={() => void send({ type: 'reload' })}>{tr('Spróbuj ponownie', 'Try again')}</button>
+            {blockedByClient && <button className="solid" onClick={() => openPanel('privacy')}>{tr('Sprawdź ustawienia prywatności', 'Review privacy settings')}</button>}</section> :
             <motion.section className="start" initial={false} animate={{ opacity: 1 }} transition={{ duration: animated ? .25 : 0 }}>
               {privateMode ? <><Shield size={55} /><h1 className="private-title">{tr('Przeglądanie prywatne', 'Private browsing')}</h1><p>{tr('To okno używa oddzielnej sesji w pamięci.', 'This window uses a separate in-memory session.')}</p></> :
                 state.clock && <div className="time"><time>{now.toLocaleTimeString(pl ? 'pl-PL' : 'en-GB', { hour: '2-digit', minute: '2-digit' })}</time><p>{now.toLocaleDateString(pl ? 'pl-PL' : 'en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}</p></div>}
@@ -307,7 +313,8 @@ function App() {
           {panel === 'privacy' && <>
             {toggle(tr('Filtr reklam, trackerów i szkodliwych domen', 'Ad, tracker and malicious domain filter'), 'block')}
             {toggle(tr('Blokuj nieszyfrowane HTTP i WebSocket', 'Block unencrypted HTTP and WebSockets'), 'httpsOnly')}
-            {toggle(tr('Zapisuj historię', 'Save browsing history'), 'history')}
+            {toggle(tr('Zapisuj historię i ostatnią sesję', 'Save browsing history and last session'), 'history')}
+            {!state.history && <p>{tr('Historia i adresy z ostatniej sesji nie są zapisywane. Osobne okno prywatne izoluje także dane stron.', 'History and last-session addresses are not saved. A private window also isolates site data.')}</p>}
             <p>{tr('Zablokowane żądania', 'Blocked requests')} · {snapshot?.blocked ?? 0}</p>
             <p>{tr('Aktualizacja list', 'Filter update')} · {snapshot?.filterTime ? new Date(snapshot.filterTime).toLocaleString(state.language) : (snapshot?.filtersLoaded ? tr('Wczytano część list', 'Some feeds loaded') : tr('Brak wczytanej listy', 'No filter list loaded'))}</p>
             {toggle(tr('Czyść historię przy zamykaniu', 'Clear history on exit'), 'clearHistoryOnExit')}
@@ -332,7 +339,7 @@ function App() {
             </div>
           </>}
           {panel === 'history' && <>
-            {!snapshot?.history.length && <p>{tr('Brak historii.', 'No history.')}</p>}
+            {!snapshot?.history.length && <p>{state.history ? tr('Brak historii.', 'No history.') : tr('Zapisywanie historii jest wyłączone.', 'History recording is off.')}</p>}
             {snapshot?.history.map(entry => <button key={entry.url + entry.at} className="row" title={entry.url} onClick={() => { void send({ type: 'navigate', value: entry.url }); setPanel(undefined) }}><span>{entry.title}</span><small>{new URL(entry.url).hostname}</small></button>)}
           </>}
           {panel === 'bookmarks' && <>
@@ -360,7 +367,13 @@ function App() {
           </>}
           {panel === 'downloads' && <>
             {!snapshot?.downloads.length && <p>{tr('Brak pobrań w tym oknie.', 'No downloads in this window.')}</p>}
-            {snapshot?.downloads.map(entry => <div className="setting" key={entry.id}><span>{entry.name}<small>{entry.status} · {format(entry.bytes)}{entry.total > 0 && ' / ' + format(entry.total)}</small></span>{['progressing', 'interrupted'].includes(entry.status) && <button onClick={() => void send({ type: 'cancel', id: entry.id })}>{tr('Anuluj', 'Cancel')}</button>}</div>)}
+            {snapshot?.downloads.map(entry => <div className="download-row" key={entry.id}>
+              {entry.available ? <button className="row" title={tr('Otwórz plik', 'Open file')} onClick={() => void send({ type: 'openDownload', id: entry.id })}>{entry.name}</button> : <div className="row">{entry.name}</div>}
+              <div className="setting"><small>{entry.status} · {format(entry.bytes)}{entry.total > 0 && ' / ' + format(entry.total)}</small>
+                {entry.available && <button onClick={() => void send({ type: 'showDownload', id: entry.id })}>{tr('Pokaż w folderze', 'Show in folder')}</button>}
+                {['progressing', 'interrupted'].includes(entry.status) && <button onClick={() => void send({ type: 'cancel', id: entry.id })}>{tr('Anuluj', 'Cancel')}</button>}
+              </div>
+            </div>)}
           </>}
           {panel === 'settings' && <>
             {toggle(tr('Animacje', 'Animations'), 'animations')}
