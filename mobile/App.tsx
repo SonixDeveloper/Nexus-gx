@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ComponentRef } from 'react'
 import {
   ActivityIndicator, BackHandler, Pressable, ScrollView, StatusBar, StyleSheet,
   Text, TextInput, useWindowDimensions, View
@@ -40,10 +40,10 @@ function Browser() {
   const [showTabs, setShowTabs] = useState(false)
   const [accent, setAccent] = useState<(typeof themes)[number]>(themes[0])
   const [notice, setNotice] = useState('')
-  const input = useRef<TextInput>(null)
+  const input = useRef<ComponentRef<typeof TextInput>>(null)
   const editing = useRef(false)
   const nextId = useRef(2)
-  const views = useRef(new Map<number, WebView>())
+  const views = useRef(new Map<number, { goBack(): void; goForward(): void; reload(): void }>())
   const { width } = useWindowDimensions()
   const active = tabs.find(tab => tab.id === activeId) ?? tabs[0]
 
