@@ -9,16 +9,6 @@ const publisherHash = '61f7f2a6bfcf74cd0bc1fe2497cc9b04254c658f79f2145392867ea83
 const idPattern = /^[a-p]{32}$/
 const limit = 50 * 1024 * 1024
 
-export function storeId(value: unknown) {
-  if (typeof value !== 'string' || value.length > 2048) return
-  try {
-    const url = new URL(value.trim())
-    if (url.origin !== 'https://chromewebstore.google.com' || url.username || url.password) return
-    const match = /^\/detail\/(?:[^/]+\/)?([a-p]{32})\/?$/.exec(url.pathname)
-    return match?.[1]
-  } catch { /* Invalid address. */ }
-}
-
 // The CRX3 header has length-delimited protobuf fields. Unknown scalar fields are skipped.
 function fields(data: Buffer) {
   let cursor = 0

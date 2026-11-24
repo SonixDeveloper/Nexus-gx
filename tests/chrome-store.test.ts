@@ -1,14 +1,15 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { storeId, verifyCrx } from '../src/main/chrome-store.ts'
+import { verifyCrx } from '../src/main/chrome-store.ts'
+import { chromeStoreId } from '../src/shared/validation.ts'
 
 const extensionId = 'nffaoalbilbmmfgbnbgppjihopabppdk'
 
 test('Chrome extension IDs are read only from genuine store listing URLs', () => {
-  assert.equal(storeId('https://chromewebstore.google.com/detail/video-speed-controller/' + extensionId + '?hl=pl'), extensionId)
-  assert.equal(storeId('https://chromewebstore.google.com.example.org/detail/' + extensionId), undefined)
-  assert.equal(storeId('https://chromewebstore.google.com@othersite.example/detail/' + extensionId), undefined)
-  assert.equal(storeId('https://example.org/detail/' + extensionId), undefined)
+  assert.equal(chromeStoreId('https://chromewebstore.google.com/detail/video-speed-controller/' + extensionId + '?hl=pl'), extensionId)
+  assert.equal(chromeStoreId('https://chromewebstore.google.com.example.org/detail/' + extensionId), undefined)
+  assert.equal(chromeStoreId('https://chromewebstore.google.com@othersite.example/detail/' + extensionId), undefined)
+  assert.equal(chromeStoreId('https://example.org/detail/' + extensionId), undefined)
 })
 
 test('rejects archives missing their CRX3 signature metadata', () => {

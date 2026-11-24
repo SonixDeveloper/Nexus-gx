@@ -87,3 +87,13 @@ export function spotifyPlayerUrl(value: unknown): string | undefined {
   const url = webUrl(value)
   if (url && new URL(url).origin === 'https://open.spotify.com') return url
 }
+
+export function chromeStoreId(value: unknown) {
+  if (typeof value !== 'string' || value.length > 2048) return
+  try {
+    const url = new URL(value.trim())
+    if (url.origin !== 'https://chromewebstore.google.com' || url.username || url.password) return
+    const match = /^\/detail\/(?:[^/]+\/)?([a-p]{32})\/?$/.exec(url.pathname)
+    return match?.[1]
+  } catch { /* Invalid address. */ }
+}

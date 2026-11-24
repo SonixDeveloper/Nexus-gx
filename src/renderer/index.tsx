@@ -5,7 +5,7 @@ import { motion } from 'motion/react'
 import { ArrowLeft, ArrowRight, ArrowUpRight, Bookmark, ChevronDown, Clock3, Download, Gamepad2, Globe2, House, Menu, Palette, Plus, RotateCw, Search, Settings2, Shield, X, Zap, LockKeyhole, Radio, Pin, VolumeX, Moon, Youtube, Twitch, Music2, MessagesSquare, Puzzle } from 'lucide-react'
 import type { BrowserAPI, Command, Settings, Snapshot, Tab, Theme } from '../shared/model'
 import { defaults, engines, presets } from '../shared/model'
-import { originOf, readTheme, sitePermissions, spotifyPlayerUrl, webUrl } from '../shared/validation'
+import { chromeStoreId, originOf, readTheme, sitePermissions, spotifyPlayerUrl, webUrl } from '../shared/validation'
 import { parseBookmarks } from './bookmarks'
 import './style.css'
 
@@ -186,6 +186,15 @@ function App() {
   }
   const protonDownload = snapshot?.platform === 'windows' ? 'https://protonvpn.com/download-windows'
     : snapshot?.platform === 'linux' ? 'https://protonvpn.com/download-linux' : 'https://protonvpn.com/download'
+  const storePage = !privateMode && !tab?.error && chromeStoreId(tab?.url) ? tab?.url : undefined
+  const installFromStore = (value: string) => {
+    if (storeLoading || !value.trim()) return
+    setStoreLoading(true)
+    void window.nexus.command({ type: 'installStoreExtension', value })
+      .then(() => { setStoreLink(''); setPanel('extensions') })
+      .catch(error => setNotice(String(error)))
+      .finally(() => setStoreLoading(false))
+  }
   const spotifyTab = Boolean(spotifyPlayerUrl(tab?.url))
   const origin = originOf(tab?.url)
   const blockedByClient = tab?.error === 'ERR_BLOCKED_BY_CLIENT'
@@ -238,6 +247,10 @@ function App() {
         </form>
         <IconButton icon={Shield} label={titles.privacy} onClick={() => openPanel('privacy')} />
       </div>
+      {storePage && <div className="media-bar"><Puzzle size={15} /><span>Chrome Web Store</span>
+        <button type="button" disabled={storeLoading} onClick={() => installFromStore(storePage)}>{storeLoading
+          ? tr('Sprawdzam pakiet…', 'Verifying package…') : tr('Zainstaluj w NEXUS GX', 'Install in NEXUS GX')}</button>
+      </div>}
       {spotifyTab && <div className="media-bar"><Music2 size={15} />
         <span>{tr('Spotify · odtwarzanie muzyki wymaga obsługi DRM.', 'Spotify · music playback requires DRM support.')}</span>
         {!privateMode && <button type="button" onClick={() => void send({ type: 'spotifyExternal' })}>{tr('Otwórz w domyślnej przeglądarce', 'Open in default browser')}</button>}
@@ -382,12 +395,7 @@ function App() {
             <h3>Chrome Web Store</h3>
             <form className="actions" onSubmit={event => {
               event.preventDefault()
-              if (storeLoading || !storeLink.trim()) return
-              setStoreLoading(true)
-              void window.nexus.command({ type: 'installStoreExtension', value: storeLink })
-                .then(() => setStoreLink(''))
-                .catch(error => setNotice(String(error)))
-                .finally(() => setStoreLoading(false))
+              installFromStore(storeLink)
             }}>
               <label className="setting">{tr('Link dodatku', 'Extension link')}<input type="url" required value={storeLink} onChange={event => setStoreLink(event.target.value)} placeholder="https://chromewebstore.google.com/…" /></label>
               <button className="solid" type="submit" disabled={storeLoading}>{storeLoading ? tr('Sprawdzam pakiet…', 'Verifying package…') : tr('Zainstaluj z linku', 'Install from link')}</button>

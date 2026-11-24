@@ -6,11 +6,11 @@ import { mkdirSync, mkdtempSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { pathToFileURL } from 'node:url'
 import { defaults, type Command, type Download, type Snapshot, type Tab } from '../shared/model'
-import { originOf, readSettings, resolveAddress, sitePermissions, spotifyPlayerUrl, webUrl } from '../shared/validation'
+import { chromeStoreId, originOf, readSettings, resolveAddress, sitePermissions, spotifyPlayerUrl, webUrl } from '../shared/validation'
 import { Storage, visits, type SavedTab } from './storage'
 import { Filters } from './filters'
 import { Extensions } from './extensions'
-import { fetchStoreExtension, storeId } from './chrome-store'
+import { fetchStoreExtension } from './chrome-store'
 import { Profiles } from './profiles'
 import { checkUpdates, updateConfigured } from './updates'
 
@@ -604,7 +604,7 @@ class Browser {
       }
       case 'installStoreExtension': {
         if (this.privateMode) break
-        const id = storeId(command.value)
+        const id = chromeStoreId(command.value)
         if (!id) throw new Error('Wklej link do dodatku z Chrome Web Store / Paste a Chrome Web Store extension link')
         const folder = mkdtempSync(join(tmpdir(), 'nexus-store-'))
         try {
