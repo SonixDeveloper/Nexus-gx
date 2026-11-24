@@ -1,0 +1,17 @@
+{
+  "expo": {
+    "name": "NEXUS GX",
+    "slug": "nexus-gx-mobile",
+    "version": "0.1.0",
+    "orientation": "default",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.sonixdeveloper.nexusgx.mobile"
+    },
+    "android": {
+      "package": "com.sonixdeveloper.nexusgx.mobile"
+    }
+  }
+}
