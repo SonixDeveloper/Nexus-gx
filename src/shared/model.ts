@@ -79,7 +79,7 @@ export type Command =
   | { type: 'removeExtension'; id: string }
   | { type: 'move'; id: string; before: string }
   | { type: 'group'; id: string; value: string }
-  | { type: 'navigate' | 'find'; value: string }
+  | { type: 'navigate' | 'find' | 'installStoreExtension'; value: string }
   | { type: 'bounds'; x: number; y: number; right: number; tab?: string; url?: string; visible: boolean }
   | { type: 'settings'; value: Settings }
   | { type: 'open'; url: string }

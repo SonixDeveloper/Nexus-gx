@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.5
+
+- Dodano instalowanie zgodnych rozszerzeń z linku Chrome Web Store z weryfikacją podpisu CRX3 i potwierdzeniem uprawnień.
+
 ## 0.1.4
 
 - Dodano panel lokalnych rozszerzeń Chromium z potwierdzeniem uprawnień, trwałą instalacją w profilu i usuwaniem dodatków.

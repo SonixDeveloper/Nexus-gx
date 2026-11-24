@@ -25,6 +25,8 @@ const format = (bytes: number) => (bytes / 1048576).toFixed(1) + ' MiB'
 function App() {
   const snapshot = useBrowser(state => state.snapshot)
   const setSnapshot = useBrowser(state => state.set)
+  const [storeLink, setStoreLink] = useState('')
+  const [storeLoading, setStoreLoading] = useState(false)
   const [panel, setPanel] = useState<Panel>()
   const [query, setQuery] = useState('')
   const [find, setFind] = useState(false)
@@ -377,6 +379,20 @@ function App() {
             </div>)}
           </>}
           {panel === 'extensions' && <>
+            <h3>Chrome Web Store</h3>
+            <form className="actions" onSubmit={event => {
+              event.preventDefault()
+              if (storeLoading || !storeLink.trim()) return
+              setStoreLoading(true)
+              void window.nexus.command({ type: 'installStoreExtension', value: storeLink })
+                .then(() => setStoreLink(''))
+                .catch(error => setNotice(String(error)))
+                .finally(() => setStoreLoading(false))
+            }}>
+              <label className="setting">{tr('Link dodatku', 'Extension link')}<input type="url" required value={storeLink} onChange={event => setStoreLink(event.target.value)} placeholder="https://chromewebstore.google.com/…" /></label>
+              <button className="solid" type="submit" disabled={storeLoading}>{storeLoading ? tr('Sprawdzam pakiet…', 'Verifying package…') : tr('Zainstaluj z linku', 'Install from link')}</button>
+              <button type="button" onClick={() => openPrivacyPage('https://chromewebstore.google.com/')}>{tr('Otwórz sklep', 'Open store')}</button>
+            </form>
             <p>{tr('Wybierz wypakowany dodatek Chromium z plikiem manifest.json. NEXUS GX obsługuje część API rozszerzeń Electron.', 'Select an unpacked Chromium extension containing manifest.json. NEXUS GX supports part of Electron’s extension APIs.')}</p>
             <div className="actions"><button onClick={() => void send({ type: 'installExtension' })}>{tr('Wczytaj lokalny dodatek', 'Load a local extension')}</button></div>
             {!snapshot?.extensions.length && <p>{tr('Brak rozszerzeń.', 'No extensions.')}</p>}

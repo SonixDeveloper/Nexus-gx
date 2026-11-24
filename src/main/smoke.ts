@@ -1,8 +1,9 @@
 import assert from 'node:assert/strict'
-import { mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import type { Extensions } from './extensions'
+import { fetchStoreExtension } from './chrome-store'
 import { once } from 'node:events'
 import { createServer } from 'node:http'
 import { setTimeout as pause } from 'node:timers/promises'
@@ -43,6 +44,15 @@ export async function runSmoke(browser: BrowserForTest, privateSessionForTest: (
   } finally {
     server.closeAllConnections()
     server.close()
+  }
+  const storeFolder = await mkdtemp(join(tmpdir(), 'nexus-store-smoke-'))
+  try {
+    await fetchStoreExtension('nffaoalbilbmmfgbnbgppjihopabppdk', process.versions.chrome ?? '', storeFolder)
+    const manifest = JSON.parse(await readFile(join(storeFolder, 'manifest.json'), 'utf8'))
+    assert.equal(typeof manifest.key, 'string')
+    assert.equal(typeof manifest.version, 'string')
+  } finally {
+    await rm(storeFolder, { recursive: true, force: true })
   }
   const extensionFolder = await mkdtemp(join(tmpdir(), 'nexus-extension-smoke-'))
   try {

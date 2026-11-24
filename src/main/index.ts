@@ -10,6 +10,7 @@ import { originOf, readSettings, resolveAddress, sitePermissions, spotifyPlayerU
 import { Storage, visits, type SavedTab } from './storage'
 import { Filters } from './filters'
 import { Extensions } from './extensions'
+import { fetchStoreExtension, storeId } from './chrome-store'
 import { Profiles } from './profiles'
 import { checkUpdates, updateConfigured } from './updates'
 
@@ -427,6 +428,21 @@ class Browser {
     this.notify()
   }
 
+  async confirmExtension(name: string, permissions: string[]) {
+    const pl = storage.data.settings.language === 'pl'
+    const answer = await dialog.showMessageBox(this.win, {
+      type: 'warning',
+      message: pl ? 'Wczytać rozszerzenie?' : 'Load this extension?',
+      detail: name + '\n\n' + (pl
+        ? 'Wczytuj dodatki tylko z zaufanego źródła. Dostęp do witryn wynika z uprawnień dodatku.'
+        : 'Only load extensions from a trusted source. Site access depends on extension permissions.')
+        + (permissions.length ? '\n\n' + permissions.slice(0, 30).join('\n').slice(0, 1500) : ''),
+      buttons: [pl ? 'Anuluj' : 'Cancel', pl ? 'Wczytaj' : 'Load'],
+      defaultId: 0, cancelId: 0
+    })
+    return answer.response === 1
+  }
+
   async execute(command: Command) {
     const tab = this.tab
     const contents = tab?.view?.webContents
@@ -582,19 +598,20 @@ class Browser {
           properties: ['openDirectory']
         })
         if (!folder.canceled && folder.filePaths[0]) {
-          await extensions.install(folder.filePaths[0], async (name, permissions) => {
-            const answer = await dialog.showMessageBox(this.win, {
-              type: 'warning',
-              message: pl ? 'Wczytać lokalne rozszerzenie?' : 'Load this local extension?',
-              detail: name + '\n\n' + (pl
-                ? 'Wczytuj dodatki tylko z zaufanego źródła. Dostęp do witryn wynika z uprawnień dodatku.'
-                : 'Only load extensions from a trusted source. Site access depends on extension permissions.')
-                + (permissions.length ? '\n\n' + permissions.slice(0, 30).join('\n').slice(0, 1500) : ''),
-              buttons: [pl ? 'Anuluj' : 'Cancel', pl ? 'Wczytaj' : 'Load'],
-              defaultId: 0, cancelId: 0
-            })
-            return answer.response === 1
-          })
+          await extensions.install(folder.filePaths[0], (name, permissions) => this.confirmExtension(name, permissions))
+        }
+        break
+      }
+      case 'installStoreExtension': {
+        if (this.privateMode) break
+        const id = storeId(command.value)
+        if (!id) throw new Error('Wklej link do dodatku z Chrome Web Store / Paste a Chrome Web Store extension link')
+        const folder = mkdtempSync(join(tmpdir(), 'nexus-store-'))
+        try {
+          await fetchStoreExtension(id, process.versions.chrome ?? '', folder)
+          await extensions.install(folder, (name, permissions) => this.confirmExtension(name, permissions))
+        } finally {
+          await rm(folder, { recursive: true, force: true })
         }
         break
       }
