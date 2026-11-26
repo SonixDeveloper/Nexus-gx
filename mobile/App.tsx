@@ -6,6 +6,7 @@ import {
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context'
 import { WebView } from 'react-native-webview'
 import { httpsUrl, resolveAddress, shortcuts } from './browser'
+import { readPlayback, togglePlayback, watchPlayback, type Playback } from './media'
 
 type Tab = {
   id: number
@@ -16,6 +17,7 @@ type Tab = {
   forward?: boolean
   loading?: boolean
   error?: boolean
+  playback?: Playback
 }
 
 const themes = ['#b9ff38', '#7cd7ff', '#ff78bc', '#c0a5ff'] as const
@@ -43,9 +45,12 @@ function Browser() {
   const input = useRef<ComponentRef<typeof TextInput>>(null)
   const editing = useRef(false)
   const nextId = useRef(2)
-  const views = useRef(new Map<number, { goBack(): void; goForward(): void; reload(): void }>())
+  const views = useRef(new Map<number, ComponentRef<typeof WebView>>())
   const { width } = useWindowDimensions()
   const active = tabs.find(tab => tab.id === activeId) ?? tabs[0]
+
+  const media = tabs.find(tab => tab.id !== active.id && tab.playback === 'playing') ??
+    tabs.find(tab => tab.id !== active.id && tab.playback === 'paused')
 
   const patch = (id: number, values: Partial<Tab>) =>
     setTabs(previous => previous.map(tab => tab.id === id ? { ...tab, ...values } : tab))
@@ -110,7 +115,7 @@ function Browser() {
       <Text accessibilityRole="header" style={styles.logo}>NEXUS <Text style={{ color: accent }}>GX</Text></Text>
       <View style={styles.actions}>
         <Button label="Strona startowa" glyph="⌂" onPress={() => {
-          patch(active.id, { source: undefined, url: undefined, title: undefined, back: false, forward: false, error: false, loading: false })
+          patch(active.id, { source: undefined, url: undefined, title: undefined, back: false, forward: false, error: false, loading: false, playback: undefined })
           setNotice('')
         }} />
         <Button label="Pokaż karty" glyph={String(tabs.length)} onPress={() => setShowTabs(!showTabs)} />
@@ -126,11 +131,22 @@ function Browser() {
         placeholder="Adres lub wyszukiwanie" placeholderTextColor="#a1a8b6" style={styles.input} />
       <Button label="Przejdź" glyph="→" onPress={() => navigate(query)} />
     </View>
+    {media && <View style={styles.miniPlayer}>
+      <Text style={[styles.control, { color: accent }]} accessibilityElementsHidden>♫</Text>
+      <Pressable accessibilityRole="button" accessibilityLabel="Wróć do karty z odtwarzaczem"
+        style={styles.mediaTitle} onPress={() => select(media.id)}>
+        <Text style={styles.muted}>{media.playback === 'playing' ? 'Odtwarzanie w tle' : 'Wstrzymano'}</Text>
+        <Text style={styles.control} numberOfLines={1}>{media.title || media.url}</Text>
+      </Pressable>
+      <Button label={media.playback === 'playing' ? 'Wstrzymaj' : 'Odtwórz'} glyph={media.playback === 'playing' ? 'Ⅱ' : '▶'}
+        onPress={() => views.current.get(media.id)?.injectJavaScript(togglePlayback)} />
+    </View>}
     {notice ? <Text accessibilityRole="alert" style={styles.notice}>{notice}</Text> : null}
     {active.loading && <ActivityIndicator color={accent} style={styles.progress} />}
     <View style={styles.content}>
-      <View style={[StyleSheet.absoluteFill, showTabs && styles.hidden]} importantForAccessibility={showTabs ? 'no-hide-descendants' : 'auto'}>
+      <View style={[StyleSheet.absoluteFill, showTabs && styles.hidden]} pointerEvents={showTabs ? 'none' : 'auto'} importantForAccessibility={showTabs ? 'no-hide-descendants' : 'auto'}>
         {tabs.filter(tab => tab.source).map(tab => <View key={tab.id} style={[StyleSheet.absoluteFill, tab.id !== active.id && styles.hidden]}
+          pointerEvents={tab.id === active.id ? 'auto' : 'none'}
           importantForAccessibility={tab.id === active.id ? 'auto' : 'no-hide-descendants'}>
           <WebView ref={view => { if (view) views.current.set(tab.id, view); else views.current.delete(tab.id) }}
             source={{ uri: tab.source! }} originWhitelist={['*']}
@@ -140,14 +156,20 @@ function Browser() {
               if (url) add(url)
             }}
             allowFileAccess={false} allowFileAccessFromFileURLs={false} allowUniversalAccessFromFileURLs={false}
+            allowsInlineMediaPlayback
+            injectedJavaScript={watchPlayback}
+            onMessage={event => {
+              const playback = readPlayback(event.nativeEvent.data)
+              if (playback && httpsUrl(event.nativeEvent.url)) patch(tab.id, { playback })
+            }}
             mixedContentMode="never" thirdPartyCookiesEnabled={false} allowsLinkPreview={false}
             onNavigationStateChange={state => {
               const url = httpsUrl(state.url)
               if (url) patch(tab.id, { url, title: state.title, back: state.canGoBack, forward: state.canGoForward, loading: state.loading })
             }}
-            onLoadStart={() => patch(tab.id, { error: false, loading: true })}
+            onLoadStart={() => patch(tab.id, { error: false, loading: true, playback: undefined })}
             onLoadEnd={() => patch(tab.id, { loading: false })}
-            onError={() => patch(tab.id, { error: true, loading: false })}
+            onError={() => patch(tab.id, { error: true, loading: false, playback: undefined })}
             renderError={() => <View style={styles.error}><Text style={styles.heading}>Nie udało się otworzyć strony</Text>
               <Button label="Spróbuj ponownie" glyph="↻" onPress={() => views.current.get(tab.id)?.reload()} /></View>}
           />
@@ -204,7 +226,9 @@ const styles = StyleSheet.create({
   notice: { color: '#ffb8bd', paddingHorizontal: 12, paddingVertical: 8 },
   progress: { paddingVertical: 3 },
   content: { flex: 1 },
-  hidden: { display: 'none' },
+  hidden: { opacity: 0 },
+  miniPlayer: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 12, backgroundColor: '#222631' },
+  mediaTitle: { flex: 1, minWidth: 0, minHeight: 44, justifyContent: 'center' },
   home: { flexGrow: 1, justifyContent: 'center', alignItems: 'center', gap: 16, paddingVertical: 24, paddingHorizontal: 18 },
   brand: { fontSize: 38, fontWeight: '900', letterSpacing: 4, textAlign: 'center' },
   heading: { color: '#f8fafc', fontSize: 20, fontWeight: '700', textAlign: 'center' },
