@@ -5,7 +5,12 @@ export interface AccountSession {
 }
 
 export class AccountError extends Error {
-  constructor(readonly status: number) { super('Account request failed') }
+  readonly status: number
+
+  constructor(status: number) {
+    super('Account request failed')
+    this.status = status
+  }
 }
 
 export function accountClient(url?: string, key?: string, request = fetch) {
