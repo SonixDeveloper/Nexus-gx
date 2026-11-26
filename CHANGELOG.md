@@ -1,5 +1,9 @@
 # Changelog
 
+## W przygotowaniu
+
+- Dodano miniodtwarzacz kart w tle z pauzą, wznawianiem, wyciszaniem i opcją obrazu w obrazie dla zgodnych filmów.
+
 ## 0.1.5
 
 - Dodano instalowanie zgodnych rozszerzeń z linku Chrome Web Store z weryfikacją podpisu CRX3 i potwierdzeniem uprawnień.

@@ -2,7 +2,7 @@ import { createRoot } from 'react-dom/client'
 import { useEffect, useLayoutEffect, useRef, useState, type FormEvent, type CSSProperties } from 'react'
 import { create } from 'zustand'
 import { motion } from 'motion/react'
-import { ArrowLeft, ArrowRight, ArrowUpRight, Bookmark, ChevronDown, Clock3, Download, Gamepad2, Globe2, House, Menu, Palette, Plus, RotateCw, Search, Settings2, Shield, X, Zap, LockKeyhole, Radio, Pin, VolumeX, Moon, Youtube, Twitch, Music2, MessagesSquare, Puzzle } from 'lucide-react'
+import { ArrowLeft, ArrowRight, ArrowUpRight, Bookmark, ChevronDown, Clock3, Download, Gamepad2, Globe2, House, Menu, Palette, Plus, RotateCw, Search, Settings2, Shield, X, Zap, LockKeyhole, Radio, Pin, VolumeX, Moon, Youtube, Twitch, Music2, MessagesSquare, Puzzle, Pause, Play, PictureInPicture2, Volume2 } from 'lucide-react'
 import type { BrowserAPI, Command, Settings, Snapshot, Tab, Theme } from '../shared/model'
 import { defaults, engines, presets } from '../shared/model'
 import { chromeStoreId, originOf, readTheme, sitePermissions, spotifyPlayerUrl, webUrl } from '../shared/validation'
@@ -25,6 +25,7 @@ const format = (bytes: number) => (bytes / 1048576).toFixed(1) + ' MiB'
 function App() {
   const snapshot = useBrowser(state => state.snapshot)
   const setSnapshot = useBrowser(state => state.set)
+  const [hiddenMedia, setHiddenMedia] = useState<string>()
   const [storeLink, setStoreLink] = useState('')
   const [storeLoading, setStoreLoading] = useState(false)
   const [panel, setPanel] = useState<Panel>()
@@ -50,6 +51,7 @@ function App() {
   const findInput = useRef<HTMLInputElement>(null)
   const state = live ?? snapshot?.settings ?? defaults
   const tab = snapshot?.tabs.find(tab => tab.id === snapshot.active)
+  const media = snapshot?.media
   const workspaceTabs = snapshot?.tabs.filter(tab => tab.workspace === snapshot.workspace)
   const pl = state.language === 'pl'
   const tr = (polish: string, english: string) => pl ? polish : english
@@ -247,6 +249,20 @@ function App() {
         </form>
         <IconButton icon={Shield} label={titles.privacy} onClick={() => openPanel('privacy')} />
       </div>
+      {media && media.id !== hiddenMedia && <section className="mini-player" aria-label={tr('Miniodtwarzacz', 'Mini player')}>
+        <Music2 size={17} className="media-icon" aria-hidden="true" />
+        <button className="media-source" type="button" title={media.title} onClick={() => { setPanel(undefined); setContext(undefined); void send({ type: 'select', id: media.id }) }}>
+          <span>{tr(media.playing ? 'Odtwarzanie w tle' : 'Wstrzymano', media.playing ? 'Playing in background' : 'Paused')}</span>
+          <strong>{media.title}</strong>
+        </button>
+        <IconButton icon={media.playing ? Pause : Play} label={tr(media.playing ? 'Wstrzymaj' : 'Odtwórz', media.playing ? 'Pause' : 'Play')}
+          onClick={() => void send({ type: media.playing ? 'mediaPause' : 'mediaPlay', id: media.id })} />
+        <IconButton icon={media.muted ? VolumeX : Volume2} label={tr(media.muted ? 'Włącz dźwięk' : 'Wycisz', media.muted ? 'Unmute' : 'Mute')}
+          onClick={() => void send({ type: 'mute', id: media.id })} />
+        <IconButton icon={PictureInPicture2} label={tr('Obraz w obrazie', 'Picture-in-picture')}
+          onClick={() => void send({ type: 'mediaPictureInPicture', id: media.id })} />
+        <IconButton icon={X} label={tr('Ukryj miniodtwarzacz', 'Hide mini player')} onClick={() => setHiddenMedia(media.id)} />
+      </section>}
       {storePage && <div className="media-bar"><Puzzle size={15} /><span>Chrome Web Store</span>
         <button type="button" disabled={storeLoading} onClick={() => installFromStore(storePage)}>{storeLoading
           ? tr('Sprawdzam pakiet…', 'Verifying package…') : tr('Zainstaluj w NEXUS GX', 'Install in NEXUS GX')}</button>

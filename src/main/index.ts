@@ -37,7 +37,7 @@ let wallpaperPath: string
 const webSessions = new WeakSet<Session>()
 const owners = new Map<number, Browser>()
 
-interface LiveTab extends Tab { view?: WebContentsView; touched: number; pending?: string }
+interface LiveTab extends Tab { view?: WebContentsView; touched: number; pending?: string; media?: { playing: boolean; started: number } }
 const preferences = { sandbox: true, contextIsolation: true, nodeIntegration: false, webSecurity: true, webviewTag: false }
 const makeTab = (saved?: SavedTab, workspace = ''): LiveTab => ({
   id: randomUUID(), url: saved?.url ?? '', title: '', loading: false, back: false, forward: false,
@@ -141,11 +141,19 @@ class Browser {
   get tab() { return this.tabs.find(tab => tab.id === this.active) }
 
   snapshot(): Snapshot {
+    const backgroundMedia = this.tabs
+      .filter(tab => tab.id !== this.active && tab.media && !tab.pending && !tab.error)
+      .sort((a, b) => Number(b.media?.playing) - Number(a.media?.playing) ||
+        (b.media?.started ?? 0) - (a.media?.started ?? 0))[0]
     return {
       tabs: this.tabs.map(({ id, url, title, loading, back, forward, pinned, muted, sleeping, group, workspace, error }) =>
         ({ id, url, title, loading, back, forward, pinned, muted, sleeping, group, workspace, error })),
       active: this.active, platform: process.platform === 'win32' ? 'windows' : process.platform === 'linux' ? 'linux' : 'other', workspace: this.tab?.workspace ?? '', workspaces: this.workspaces, private: this.privateMode, settings: storage.data.settings,
       history: this.privateMode || !storage.data.settings.history ? [] : storage.data.history, bookmarks: storage.data.bookmarks,
+      media: backgroundMedia?.media && {
+        id: backgroundMedia.id, title: backgroundMedia.title || backgroundMedia.url,
+        playing: backgroundMedia.media.playing, muted: backgroundMedia.muted
+      },
       extensions: this.privateMode ? [] : extensions.list(),
       downloads: [...this.downloads.values()].map(entry => entry.info), blocked: this.blocked,
       filterTime: filters.updated, filtersLoaded: filters.loaded, version: app.getVersion(), wallpaperRevision, updateConfigured, profileId: profiles.active, profiles: profiles.entries
@@ -250,7 +258,9 @@ class Browser {
     contents.on('did-start-navigation', event => {
       if (event.isMainFrame && !event.isSameDocument && webUrl(event.url)) {
         tab.pending = event.url
+        tab.media = undefined
         this.layout()
+        this.notify()
       }
     })
     contents.on('did-start-loading', () => { tab.loading = true; this.notify() })
@@ -261,6 +271,16 @@ class Browser {
         this.layout()
       }
       this.sync(tab)
+      this.notify()
+    })
+    contents.on('media-started-playing', () => {
+      if (tab.view !== view || tab.pending) return
+      tab.media = { playing: true, started: Date.now() }
+      this.notify()
+    })
+    contents.on('media-paused', () => {
+      if (tab.view !== view || !tab.media) return
+      tab.media.playing = false
       this.notify()
     })
     contents.on('page-title-updated', (_event, title) => { tab.title = title.slice(0, 512); this.notify() })
@@ -317,6 +337,7 @@ class Browser {
     const view = tab.view
     if (!view) return
     tab.view = undefined
+    tab.media = undefined
     tab.pending = undefined
     if (this.attached === view) {
       if (!this.win.isDestroyed()) this.win.contentView.removeChildView(view)
@@ -330,7 +351,7 @@ class Browser {
   }
 
   sleep(tab: LiveTab) {
-    if (tab === this.tab || tab.loading || tab.view?.webContents.isCurrentlyAudible() || !tab.view || !tab.url) return
+    if (tab === this.tab || tab.loading || tab.media?.playing || tab.view?.webContents.isCurrentlyAudible() || !tab.view || !tab.url) return
     this.dispose(tab)
     tab.sleeping = true
     this.notify()
@@ -443,6 +464,32 @@ class Browser {
     return answer.response === 1
   }
 
+  async controlMedia(tab: LiveTab, action: 'mediaPlay' | 'mediaPause' | 'mediaPictureInPicture') {
+    const contents = tab.view?.webContents
+    if (!tab.media || tab.pending || tab.error || !contents || contents.isDestroyed()) return
+    // Run only browser-owned code in an isolated world. Page data never becomes script source.
+    const operation = {
+      mediaPlay: 'await player.play()',
+      mediaPause: 'player.pause()',
+      mediaPictureInPicture: 'await player.requestPictureInPicture()'
+    }[action]
+    const changed = await contents.executeJavaScriptInIsolatedWorld(1001, [{ code: `
+      (async () => {
+        const players = Array.from(document.querySelectorAll('${action === 'mediaPictureInPicture' ? 'video' : 'video, audio'}'))
+          .filter(player => player.readyState >= 1)
+        const player = players.find(player => !player.paused && !player.ended) ??
+          players.find(player => player.currentTime > 0 && !player.ended) ?? players[0]
+        if (!player) return false
+        try { ${operation}; return true } catch { return false }
+      })()
+    ` }], action !== 'mediaPause').catch(() => false)
+    if (changed !== true && tab.view?.webContents === contents && !tab.pending) {
+      const english = storage.data.settings.language === 'en'
+      if (action === 'mediaPictureInPicture') throw new Error(english ? 'Picture-in-picture is unavailable for this video.' : 'Obraz w obrazie jest niedostępny dla tego filmu.')
+      throw new Error(english ? 'Open the source tab to control this player.' : 'Otwórz kartę źródłową, aby sterować odtwarzaczem.')
+    }
+  }
+
   async execute(command: Command) {
     const tab = this.tab
     const contents = tab?.view?.webContents
@@ -465,6 +512,11 @@ class Browser {
       case 'home': if (tab) { this.dispose(tab); Object.assign(tab, { url: '', title: '', error: '', sleeping: false }) }; break
       case 'pin': if (target) target.pinned = !target.pinned; break
       case 'mute': if (target) { target.muted = !target.muted; target.view?.webContents.setAudioMuted(target.muted) }; break
+      case 'mediaPlay':
+      case 'mediaPause':
+      case 'mediaPictureInPicture':
+        if (target) await this.controlMedia(target, command.type)
+        return
       case 'sleep': if (target) this.sleep(target); break
       case 'group': if (target && typeof command.value === 'string') target.group = command.value.slice(0, 32); break
       case 'workspace': {

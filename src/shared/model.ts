@@ -69,6 +69,7 @@ export interface Snapshot {
   platform: 'windows' | 'linux' | 'other'
   workspace: string
   workspaces: string[]
+  media?: { id: string; title: string; playing: boolean; muted: boolean }
   extensions: InstalledExtension[]
   profileId: string
   profiles: Array<{ id: string; name: string }>
@@ -76,6 +77,7 @@ export interface Snapshot {
 export type Command =
   | { type: 'new'; url?: string }
   | { type: 'select' | 'close' | 'pin' | 'mute' | 'sleep' | 'cancel' | 'openDownload' | 'showDownload'; id: string }
+  | { type: 'mediaPlay' | 'mediaPause' | 'mediaPictureInPicture'; id: string }
   | { type: 'removeExtension'; id: string }
   | { type: 'move'; id: string; before: string }
   | { type: 'group'; id: string; value: string }

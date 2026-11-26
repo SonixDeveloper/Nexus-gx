@@ -92,7 +92,45 @@ export async function runSmoke(browser: BrowserForTest, privateSessionForTest: (
   assert.equal(browser.snapshot().history[0]?.url, 'https://example.com/')
   await browser.execute({ type: 'bookmark' })
   assert.equal(browser.snapshot().bookmarks[0]?.url, 'https://example.com/')
-  await browser.execute({ type: 'close', id: browser.snapshot().active })
+  const mediaTab = browser.snapshot().active
+  const wave = Buffer.alloc(44 + 8000)
+  wave.write('RIFF', 0)
+  wave.writeUInt32LE(wave.length - 8, 4)
+  wave.write('WAVEfmt ', 8)
+  wave.writeUInt32LE(16, 16)
+  wave.writeUInt16LE(1, 20)
+  wave.writeUInt16LE(1, 22)
+  wave.writeUInt32LE(8000, 24)
+  wave.writeUInt32LE(8000, 28)
+  wave.writeUInt16LE(1, 32)
+  wave.writeUInt16LE(8, 34)
+  wave.write('data', 36)
+  wave.writeUInt32LE(8000, 40)
+  for (let i = 44; i < wave.length; i++) wave[i] = 128 + Math.round(30 * Math.sin(i * Math.PI / 10))
+  await page.executeJavaScript(`(() => {
+    const audio = document.createElement('audio')
+    audio.src = 'data:audio/wav;base64,${wave.toString('base64')}'
+    audio.loop = true
+    document.body.append(audio)
+    return audio.play()
+  })()`, true)
+  const otherTab = browser.snapshot().tabs.find(tab => tab.id !== mediaTab)
+  assert.ok(otherTab)
+  await browser.execute({ type: 'select', id: otherTab.id })
+  await waitFor(() => browser.snapshot().media?.id === mediaTab && browser.snapshot().media?.playing === true)
+  await waitFor(() => ui.executeJavaScript('Boolean(document.querySelector(".mini-player"))'))
+  assert.equal(await page.executeJavaScript('document.querySelector("audio").paused'), false)
+  await browser.execute({ type: 'sleep', id: mediaTab })
+  assert.equal(browser.snapshot().tabs.find(tab => tab.id === mediaTab)?.sleeping, false)
+  await ui.executeJavaScript('document.querySelector(".mini-player button[aria-label=Pause]").click()')
+  await waitFor(() => browser.snapshot().media?.playing === false)
+  assert.equal(await page.executeJavaScript('document.querySelector("audio").paused'), true)
+  await waitFor(() => ui.executeJavaScript('Boolean(document.querySelector(".mini-player button[aria-label=Play]"))'))
+  await ui.executeJavaScript('document.querySelector(".mini-player button[aria-label=Play]").click()')
+  await waitFor(() => browser.snapshot().media?.playing === true)
+  await browser.execute({ type: 'select', id: mediaTab })
+  assert.equal(browser.snapshot().media, undefined)
+  await browser.execute({ type: 'close', id: mediaTab })
   assert.equal(browser.snapshot().tabs.length, 1)
   await browser.execute({ type: 'restore' })
   assert.equal(browser.snapshot().tabs.length, 2)
@@ -101,4 +139,12 @@ export async function runSmoke(browser: BrowserForTest, privateSessionForTest: (
   await browser.execute({ type: 'clear' })
   assert.equal(browser.snapshot().history.length, 0)
   console.log('Chromium navigation, IPC isolation, bookmarks, tabs and history passed')
+}
+
+async function waitFor(ready: () => boolean | Promise<boolean>) {
+  for (let attempt = 0; attempt < 80; attempt++) {
+    if (await ready()) return
+    await pause(50)
+  }
+  assert.fail('Timed out waiting for mini-player state')
 }

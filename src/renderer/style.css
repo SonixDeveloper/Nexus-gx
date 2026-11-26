@@ -117,3 +117,12 @@ input[type=range], input[type=checkbox] { accent-color: var(--accent); }
 .media-bar button { margin-left: auto; color: var(--text); padding: 6px 9px; border: 1px solid var(--border); border-radius: 7px; }
 .media-bar button:hover { border-color: var(--accent); }
 .notice-bar { justify-content: space-between; color: var(--text); }
+
+.mini-player { display: flex; align-items: center; justify-content: flex-end; gap: 4px; padding: 4px 12px; border-top: 1px solid var(--border); }
+.mini-player .media-icon { flex: none; margin-inline: 6px; color: var(--accent); }
+.mini-player .media-source { min-width: 0; width: 250px; margin-right: 6px; text-align: left; }
+.media-source span, .media-source strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.media-source span { color: var(--muted); font-size: 11px; }
+.media-source strong { color: var(--text); font-size: 12px; font-weight: 600; }
+.media-source:hover strong { color: var(--accent); }
+.mini-player .icon { flex: none; }
