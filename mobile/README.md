@@ -21,3 +21,14 @@ APK i paczka na symulator znajdują się w artefaktach workflow po pomyślnej ko
 ## Miniodtwarzacz
 
 Uruchom odtwarzanie i otwórz drugą kartę. Panel pod paskiem adresu pozwala wstrzymać dźwięk, wznowić go lub wrócić do karty źródłowej. Działa z odtwarzaczami HTML5 w głównym dokumencie, gdy NEXUS GX pozostaje na ekranie.
+
+## Konta NEXUS GX
+
+Logowanie kodem e-mail działa po skonfigurowaniu projektu Supabase. Włącz rejestrację przez e-mail i potwierdzanie adresu, ustaw szablon Magic Link na kod `{{ .Token }}` oraz skonfiguruj własny SMTP, aby wiadomości mogły docierać do użytkowników spoza zespołu.
+
+Ustaw lokalnie w `.env.local` lub w zmiennych repozytorium GitHub Actions przed kompilacją:
+
+- `EXPO_PUBLIC_SUPABASE_URL` z adresem `https://<projekt>.supabase.co`
+- `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` z kluczem publicznym `sb_publishable_…`
+
+Token odświeżania zapisuje Expo SecureStore na urządzeniu. Kolor motywu pozostaje lokalnie. Usługa kont nie otrzymuje historii, kart ani cookies odwiedzanych witryn. Konto NEXUS GX nie steruje sesjami logowania do witryn w WebView.

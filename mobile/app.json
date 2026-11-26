@@ -6,6 +6,7 @@
     "orientation": "default",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
+    "plugins": ["expo-secure-store"],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.sonixdeveloper.nexusgx.mobile"

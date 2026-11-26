@@ -5,6 +5,8 @@ import {
 } from 'react-native'
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context'
 import { WebView } from 'react-native-webview'
+import { AccountPanel, useNexusAccount } from './AccountPanel'
+import * as SecureStore from 'expo-secure-store'
 import { httpsUrl, resolveAddress, shortcuts } from './browser'
 import { readPlayback, togglePlayback, watchPlayback, type Playback } from './media'
 
@@ -36,11 +38,22 @@ function Button({ label, glyph, disabled, onPress }: {
 }
 
 function Browser() {
+  const account = useNexusAccount()
+  const [showAccount, setShowAccount] = useState(false)
   const [tabs, setTabs] = useState<Tab[]>([{ id: 1 }])
   const [activeId, setActiveId] = useState(1)
   const [query, setQuery] = useState('')
   const [showTabs, setShowTabs] = useState(false)
   const [accent, setAccent] = useState<(typeof themes)[number]>(themes[0])
+  const accentTouched = useRef(false)
+  useEffect(() => {
+    let mounted = true
+    void SecureStore.getItemAsync('nexus.theme.accent').then(value => {
+      const saved = themes.find(color => color === value)
+      if (mounted && saved && !accentTouched.current) setAccent(saved)
+    }).catch(() => undefined)
+    return () => { mounted = false }
+  }, [])
   const [notice, setNotice] = useState('')
   const input = useRef<ComponentRef<typeof TextInput>>(null)
   const editing = useRef(false)
@@ -111,9 +124,11 @@ function Browser() {
 
   return <SafeAreaView style={styles.screen}>
     <StatusBar barStyle="light-content" />
+    <AccountPanel visible={showAccount} close={() => setShowAccount(false)} account={account} />
     <View style={styles.top}>
       <Text accessibilityRole="header" style={styles.logo}>NEXUS <Text style={{ color: accent }}>GX</Text></Text>
       <View style={styles.actions}>
+        <Button label="Konto NEXUS GX" glyph={account.session ? "●" : "○"} onPress={() => setShowAccount(true)} />
         <Button label="Strona startowa" glyph="⌂" onPress={() => {
           patch(active.id, { source: undefined, url: undefined, title: undefined, back: false, forward: false, error: false, loading: false, playback: undefined })
           setNotice('')
@@ -188,7 +203,11 @@ function Browser() {
           </View>
           <View style={styles.actions}>{themes.map(color => <Pressable key={color} accessibilityRole="button"
             accessibilityLabel={'Kolor motywu ' + color} accessibilityState={{ selected: accent === color }}
-            onPress={() => setAccent(color)} style={[styles.swatch, { backgroundColor: color, borderColor: accent === color ? '#fff' : color }]} />)}</View>
+            onPress={() => {
+              accentTouched.current = true
+              setAccent(color)
+              void SecureStore.setItemAsync('nexus.theme.accent', color).catch(() => setNotice('Nie udało się zapisać koloru motywu.'))
+            }} style={[styles.swatch, { backgroundColor: color, borderColor: accent === color ? '#fff' : color }]} />)}</View>
         </ScrollView>}
       </View>
       {showTabs && <ScrollView style={styles.tabs}>

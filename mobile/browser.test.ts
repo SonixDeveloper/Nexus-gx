@@ -43,3 +43,22 @@ test('mini player reports and controls a playing media element', async () => {
   assert.equal(readPlayback(messages.at(-1)!), 'idle')
   assert.equal(readPlayback('{"action":"open"}'), undefined)
 })
+
+test('account codes and session refresh go only to the configured auth service', async () => {
+  const { accountClient } = await import('./account.ts')
+  const requests: Array<{ url: string; body: unknown }> = []
+  const session = { refresh_token: 'refresh', access_token: 'access', user: { id: 'account', email: 'user@example.com' } }
+  const client = accountClient('https://project.supabase.co', 'sb_publishable_test', async (input, init) => {
+    requests.push({ url: String(input), body: JSON.parse(String(init?.body)) })
+    return new Response(JSON.stringify(session))
+  })
+  assert.ok(client)
+  await client.sendCode('user@example.com')
+  assert.deepEqual(await client.verify('user@example.com', '123456'), session)
+  assert.deepEqual(await client.refresh(session.refresh_token), session)
+  assert.deepEqual(requests.map(r => r.url), ['otp', 'verify', 'token?grant_type=refresh_token']
+    .map(path => 'https://project.supabase.co/auth/v1/' + path))
+  assert.deepEqual(requests[2]?.body, { refresh_token: 'refresh' })
+  assert.equal(accountClient('https://other.example.com', 'sb_publishable_test'), undefined)
+  assert.equal(accountClient('https://project.supabase.co', 'sb_secret_test'), undefined)
+})
