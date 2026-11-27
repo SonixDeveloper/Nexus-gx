@@ -1,8 +1,9 @@
 # Changelog
 
-## W przygotowaniu
+## 0.1.6
 
 - Dodano miniodtwarzacz kart w tle z pauzą, wznawianiem, wyciszaniem i opcją obrazu w obrazie dla zgodnych filmów.
+- Dodano otwieranie wybranego utworu lub albumu w systemowej aplikacji Spotify.
 
 ## 0.1.5
 

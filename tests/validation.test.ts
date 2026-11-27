@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { blockedHost, parseHosts, readSettings, resolveAddress, spotifyPlayerUrl, webUrl } from '../src/shared/validation.ts'
+import { blockedHost, parseHosts, readSettings, resolveAddress, spotifyAppUri, spotifyPlayerUrl, webUrl } from '../src/shared/validation.ts'
 
 test('address bar only admits web schemes and resolves search text', () => {
   assert.equal(resolveAddress('example.com/docs', 'DuckDuckGo'), 'https://example.com/docs')
@@ -32,4 +32,12 @@ test('Spotify handoff only permits the exact HTTPS web player origin', () => {
   assert.equal(spotifyPlayerUrl('https://open.spotify.com.example.org/track/example'), undefined)
   assert.equal(spotifyPlayerUrl('https://open.spotify.com:1234/'), undefined)
   assert.equal(spotifyPlayerUrl('http://open.spotify.com/'), undefined)
+})
+
+test('Spotify application links retain only recognized resource types and IDs', () => {
+  const id = '6rqhFgbbKwnb9MLmUQDhG6'
+  assert.equal(spotifyAppUri(`https://open.spotify.com/intl-pl/track/${id}?si=abc`), `spotify:track:${id}`)
+  assert.equal(spotifyAppUri(`https://open.spotify.com.example.com/track/${id}`), undefined)
+  assert.equal(spotifyAppUri(`https://open.spotify.com/search/${id}`), undefined)
+  assert.equal(spotifyAppUri(`https://open.spotify.com/track/${id}%2F`), undefined)
 })

@@ -269,7 +269,7 @@ function App() {
       </div>}
       {spotifyTab && <div className="media-bar"><Music2 size={15} />
         <span>{tr('Spotify · odtwarzanie muzyki wymaga obsługi DRM.', 'Spotify · music playback requires DRM support.')}</span>
-        {!privateMode && <button type="button" onClick={() => void send({ type: 'spotifyExternal' })}>{tr('Otwórz w domyślnej przeglądarce', 'Open in default browser')}</button>}
+        {!privateMode && <button type="button" onClick={() => void send({ type: 'spotifyExternal' })}>{tr('Otwórz w Spotify', 'Open in Spotify')}</button>}
       </div>}
       {notice && <div className="notice-bar" role="status">{notice}<IconButton icon={X} label={tr('Zamknij', 'Close')} onClick={() => setNotice('')} /></div>}
       {find && <div className="find-bar"><input ref={findInput} placeholder={tr('Znajdź na stronie', 'Find in page')} aria-label={tr('Znajdź na stronie', 'Find in page')} onChange={event => void send({ type: 'find', value: event.target.value })} /><IconButton icon={X} label={tr('Zamknij', 'Close')} onClick={() => { setFind(false); void send({ type: 'find', value: '' }) }} /></div>}

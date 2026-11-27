@@ -88,6 +88,13 @@ export function spotifyPlayerUrl(value: unknown): string | undefined {
   if (url && new URL(url).origin === 'https://open.spotify.com') return url
 }
 
+export function spotifyAppUri(value: unknown): string | undefined {
+  const url = spotifyPlayerUrl(value)
+  if (!url) return
+  const match = new URL(url).pathname.match(/^\/(?:intl-[a-z]{2}\/)?(track|album|artist|playlist|episode|show)\/([a-zA-Z0-9]{22})\/?$/)
+  if (match) return `spotify:${match[1]}:${match[2]}`
+}
+
 export function chromeStoreId(value: unknown) {
   if (typeof value !== 'string' || value.length > 2048) return
   try {

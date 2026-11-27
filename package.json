@@ -1,7 +1,7 @@
 {
   "name": "nexus-gx",
   "productName": "NEXUS GX",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "private": true,
   "type": "module",
   "description": "Desktop gaming browser powered by Chromium",

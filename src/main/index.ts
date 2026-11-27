@@ -6,7 +6,7 @@ import { mkdirSync, mkdtempSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { pathToFileURL } from 'node:url'
 import { defaults, type Command, type Download, type Snapshot, type Tab } from '../shared/model'
-import { chromeStoreId, originOf, readSettings, resolveAddress, sitePermissions, spotifyPlayerUrl, webUrl } from '../shared/validation'
+import { chromeStoreId, originOf, readSettings, resolveAddress, sitePermissions, spotifyAppUri, spotifyPlayerUrl, webUrl } from '../shared/validation'
 import { Storage, visits, type SavedTab } from './storage'
 import { Filters } from './filters'
 import { Extensions } from './extensions'
@@ -724,6 +724,13 @@ class Browser {
         if (this.privateMode) break
         const url = spotifyPlayerUrl(tab?.url)
         if (!url) break
+        const uri = spotifyAppUri(url)
+        if (uri) {
+          try {
+            await shell.openExternal(uri)
+            break
+          } catch { /* Use the web player when no Spotify application is installed. */ }
+        }
         const handler = await app.getApplicationInfoForProtocol(url)
         if (app.isDefaultProtocolClient('https') || handler.name === app.getName())
           throw new Error('Wybierz inną przeglądarkę domyślną obsługującą Spotify / Choose a different default browser that supports Spotify.')
