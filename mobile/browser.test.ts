@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { httpsUrl, resolveAddress } from './browser.ts'
+import { httpsUrl, resolveAddress, spotifyPlayerUrl } from './browser.ts'
 
 test('HTTPS sites and searches resolve', () => {
   assert.equal(resolveAddress('example.com/help'), 'https://example.com/help')
@@ -61,4 +61,12 @@ test('account codes and session refresh go only to the configured auth service',
   assert.deepEqual(requests[2]?.body, { refresh_token: 'refresh' })
   assert.equal(accountClient('https://other.example.com', 'sb_publishable_test'), undefined)
   assert.equal(accountClient('https://project.supabase.co', 'sb_secret_test'), undefined)
+})
+
+test('Spotify handoff preserves the resource and accepts only its official web player', () => {
+  const track = 'https://open.spotify.com/track/6rqhFgbbKwnb9MLmUQDhG6?si=abc'
+  assert.equal(spotifyPlayerUrl(track), track)
+  assert.equal(spotifyPlayerUrl('https://open.spotify.com.example.org/track/abc'), undefined)
+  assert.equal(spotifyPlayerUrl('https://open.spotify.com@other.example/track/abc'), undefined)
+  assert.equal(spotifyPlayerUrl('http://open.spotify.com/'), undefined)
 })

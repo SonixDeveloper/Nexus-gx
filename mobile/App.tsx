@@ -1,18 +1,18 @@
 import { useEffect, useRef, useState, type ComponentRef } from 'react'
 import {
-  ActivityIndicator, BackHandler, Pressable, ScrollView, StatusBar, StyleSheet,
+  ActivityIndicator, BackHandler, Linking, Pressable, ScrollView, StatusBar, StyleSheet,
   Text, TextInput, useWindowDimensions, View
 } from 'react-native'
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context'
 import { WebView } from 'react-native-webview'
 import { AccountPanel, useNexusAccount } from './AccountPanel'
 import * as SecureStore from 'expo-secure-store'
-import { httpsUrl, resolveAddress, shortcuts } from './browser'
+import { httpsUrl, resolveAddress, shortcuts, spotifyPlayerUrl } from './browser'
 import { readPlayback, togglePlayback, watchPlayback, type Playback } from './media'
 
 type Tab = {
   id: number
-  source?: string
+  source?: { uri: string }
   url?: string
   title?: string
   back?: boolean
@@ -62,6 +62,7 @@ function Browser() {
   const { width } = useWindowDimensions()
   const active = tabs.find(tab => tab.id === activeId) ?? tabs[0]
 
+  const spotifyUrl = spotifyPlayerUrl(active.url)
   const media = tabs.find(tab => tab.id !== active.id && tab.playback === 'playing') ??
     tabs.find(tab => tab.id !== active.id && tab.playback === 'paused')
 
@@ -69,7 +70,7 @@ function Browser() {
     setTabs(previous => previous.map(tab => tab.id === id ? { ...tab, ...values } : tab))
 
   useEffect(() => {
-    if (!editing.current) setQuery(active.url ?? active.source ?? '')
+    if (!editing.current) setQuery(active.url ?? active.source?.uri ?? '')
   }, [active.id, active.url, active.source])
 
   useEffect(() => {
@@ -94,7 +95,7 @@ function Browser() {
       views.current.get(active.id)?.reload()
       return
     }
-    patch(active.id, { source: address, url: address, error: false, loading: true })
+    patch(active.id, { source: { uri: address }, url: address, error: false, loading: true })
   }
 
   function select(id: number) {
@@ -108,7 +109,7 @@ function Browser() {
   function add(url?: string) {
     if (tabs.length >= maxTabs) { setNotice('Limit to 8 kart. Zamknij kartę, aby otworzyć kolejną.'); return }
     const id = nextId.current++
-    setTabs(previous => [...previous, { id, source: url, url, loading: Boolean(url) }])
+    setTabs(previous => [...previous, { id, source: url ? { uri: url } : undefined, url, loading: Boolean(url) }])
     select(id)
   }
 
@@ -156,6 +157,10 @@ function Browser() {
       <Button label={media.playback === 'playing' ? 'Wstrzymaj' : 'Odtwórz'} glyph={media.playback === 'playing' ? 'Ⅱ' : '▶'}
         onPress={() => views.current.get(media.id)?.injectJavaScript(togglePlayback)} />
     </View>}
+    {spotifyUrl && <Pressable accessibilityRole="button" style={styles.spotify}
+      onPress={() => void Linking.openURL(spotifyUrl).catch(() => setNotice('Telefon nie mógł otworzyć linku Spotify.'))}>
+      <Text style={[styles.control, { color: '#66e7a4' }]}>Otwórz w Spotify</Text>
+    </Pressable>}
     {notice ? <Text accessibilityRole="alert" style={styles.notice}>{notice}</Text> : null}
     {active.loading && <ActivityIndicator color={accent} style={styles.progress} />}
     <View style={styles.content}>
@@ -164,7 +169,7 @@ function Browser() {
           pointerEvents={tab.id === active.id ? 'auto' : 'none'}
           importantForAccessibility={tab.id === active.id ? 'auto' : 'no-hide-descendants'}>
           <WebView ref={view => { if (view) views.current.set(tab.id, view); else views.current.delete(tab.id) }}
-            source={{ uri: tab.source! }} originWhitelist={['*']}
+            source={tab.source} originWhitelist={['*']}
             onShouldStartLoadWithRequest={request => Boolean(httpsUrl(request.url)) || request.url === 'about:blank'}
             onOpenWindow={event => {
               const url = httpsUrl(event.nativeEvent.targetUrl)
@@ -246,6 +251,7 @@ const styles = StyleSheet.create({
   progress: { paddingVertical: 3 },
   content: { flex: 1 },
   hidden: { opacity: 0 },
+  spotify: { minHeight: 44, justifyContent: 'center', paddingHorizontal: 12, backgroundColor: '#222631' },
   miniPlayer: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 12, backgroundColor: '#222631' },
   mediaTitle: { flex: 1, minWidth: 0, minHeight: 44, justifyContent: 'center' },
   home: { flexGrow: 1, justifyContent: 'center', alignItems: 'center', gap: 16, paddingVertical: 24, paddingHorizontal: 18 },

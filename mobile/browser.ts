@@ -15,6 +15,11 @@ export function resolveAddress(input: string): string | undefined {
   return 'https://duckduckgo.com/?q=' + encodeURIComponent(value)
 }
 
+export function spotifyPlayerUrl(value?: string): string | undefined {
+  const safe = value && httpsUrl(value)
+  if (safe && new URL(safe).origin === 'https://open.spotify.com') return safe
+}
+
 export const shortcuts = [
   ['YouTube', 'https://www.youtube.com/'], ['Twitch', 'https://www.twitch.tv/'],
   ['Discord', 'https://discord.com/'], ['Steam', 'https://store.steampowered.com/'],
