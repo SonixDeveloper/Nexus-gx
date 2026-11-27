@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.nexusgx.NexusGX</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <name>NEXUS GX</name>
+  <summary>Gaming desktop browser powered by Chromium</summary>
+  <developer id="io.github.nexusgx">
+    <name>NEXUS GX</name>
+  </developer>
+  <description><p>NEXUS GX is a desktop browser with customizable themes, separate private windows and a control center for inactive tabs. Apply an accent color, change the new tab wallpaper and review the browser's process metrics.</p></description>
+  <launchable type="desktop-id">io.github.nexusgx.NexusGX.desktop</launchable>
+  <releases>
+    <release version="0.1.6" date="2026-11-27"/>
+  </releases>
+</component>

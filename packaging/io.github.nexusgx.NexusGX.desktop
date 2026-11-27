@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=NEXUS GX
+Comment=Browse the web with NEXUS GX
+Exec=nexus-gx %U
+Icon=io.github.nexusgx.NexusGX
+Terminal=false
+Type=Application
+Categories=Network;WebBrowser;
+MimeType=text/html;x-scheme-handler/http;x-scheme-handler/https;
+StartupWMClass=io.github.nexusgx.NexusGX

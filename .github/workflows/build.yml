@@ -1,0 +1,78 @@
+name: NEXUS GX packages
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify-and-package:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2025]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+      - run: npm install
+      - run: npx install-electron --no
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
+      - if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb xauth
+          sudo chown root:root node_modules/electron/dist/chrome-sandbox
+          sudo chmod 4755 node_modules/electron/dist/chrome-sandbox
+      - if: runner.os == 'Linux'
+        run: xvfb-run -a npm run test:integration
+      - if: runner.os == 'Windows'
+        run: npm run test:integration
+      - if: runner.os == 'Windows'
+        run: npm run dist:win
+        env:
+          CSC_LINK: ${{ secrets.NEXUS_WINDOWS_CERTIFICATE }}
+          CSC_KEY_PASSWORD: ${{ secrets.NEXUS_WINDOWS_CERTIFICATE_PASSWORD }}
+          NEXUS_UPDATE_URL: ${{ vars.NEXUS_UPDATE_URL }}
+          NEXUS_UPDATE_PUBLIC_KEY: ${{ vars.NEXUS_UPDATE_PUBLIC_KEY }}
+      - if: runner.os == 'Linux'
+        run: npm run dist:linux
+        env:
+          NEXUS_UPDATE_URL: ${{ vars.NEXUS_UPDATE_URL }}
+          NEXUS_UPDATE_PUBLIC_KEY: ${{ vars.NEXUS_UPDATE_PUBLIC_KEY }}
+      - if: runner.os == 'Linux'
+        uses: actions/upload-artifact@v6
+        with:
+          name: nexus-gx-Linux
+          if-no-files-found: error
+          path: |
+            release/NEXUS-GX-x86_64.AppImage
+            release/nexus-gx_amd64.deb
+      - if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y flatpak flatpak-builder
+          flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+          flatpak install --user --noninteractive flathub org.freedesktop.Platform//25.08 org.freedesktop.Sdk//25.08 org.electronjs.Electron2.BaseApp//25.08
+          flatpak-builder --user --force-clean --repo=flatpak-repo flatpak-build packaging/io.github.nexusgx.NexusGX.yml
+          flatpak build-bundle flatpak-repo release/NEXUS-GX.flatpak io.github.nexusgx.NexusGX
+      - if: runner.os == 'Linux'
+        uses: actions/upload-artifact@v6
+        with:
+          name: nexus-gx-Flatpak
+          if-no-files-found: error
+          path: release/NEXUS-GX.flatpak
+      - if: runner.os == 'Windows'
+        uses: actions/upload-artifact@v6
+        with:
+          name: nexus-gx-Windows
+          if-no-files-found: error
+          path: release/NEXUS-GX-Setup.exe
